@@ -2,7 +2,6 @@
 
 // * register file
 // * posedge write GPRs
-// ? how to initialize GPRs
 module regfile(
     input           clk,
     input           resetn,
@@ -26,7 +25,7 @@ always @(posedge clk) begin
             GPR[i] <= 32'h0;
     end
     else if(wen) begin
-        GPR[wreg] <= inData;
+        GPR[wreg] <= wdata;
     end
 end
 
