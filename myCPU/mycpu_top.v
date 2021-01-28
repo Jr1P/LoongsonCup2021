@@ -24,40 +24,6 @@ module mycpu_top(
     output  [31:0]  debug_wb_rf_wdata
 );
 
-    reg [31:0]  PC;       // * PC[1:0] is always 2'b0
-
-    // *regs
-    // * IF/ID 
-    reg [31:0]  IF_ID_PC;
-    reg [31:0]  IF_ID_NPC;
-    reg [31:0]  IF_ID_IR;
-    // * ID/EX
-    reg         ID_EX_imm;
-    reg         ID_EX_regwen;
-    reg         ID_EX_R;
-    reg         ID_EX_AL;
-    reg [3 :0]  ID_EX_data_wen;
-    reg [5 :0]  ID_EX_func;
-    reg [31:0]  ID_EX_A;
-    reg [31:0]  ID_EX_B;
-    reg [31:0]  ID_EX_PC;
-    reg [31:0]  ID_EX_IR;
-    reg [31:0]  ID_EX_Imm;
-    // * EX/MEM
-    reg         EX_MEM_R;
-    reg         EX_MEM_regwen;
-    reg [31:0]  EX_MEM_PC;
-    reg [31:0]  EX_MEM_IR;
-    reg [31:0]  EX_MEM_AluOut;
-    reg [31:0]  EX_MEM_B;
-    // * MEM/WB
-    reg         MEM_WB_R;
-    reg         MEM_WB_regwen;
-    reg [31:0]  MEM_WB_PC;
-    reg [31:0]  MEM_WB_AluOut;
-    reg [31:0]  MEM_WB_DataOut;
-
-    // *wires
     // *IF
     wire [31:0] NPC;
     // *ID
@@ -82,30 +48,21 @@ module mycpu_top(
 
     // *WB
 
-    always @(posedge clk) begin
-        // MEM/WB
-        MEM_WB_DataOut <= data_sram_rdata;
-
-        ID_EX_imm   <= imm;
-
-        ID_EX_Imm   <= Imm;
-
-        IF_ID_PC    <= PC;
-        IF_ID_IR    <= inst_sram_rdata;
-        IF_ID_NPC   <= NPC;
-
-        PC <= !resetn ? 32'b0 : NPC;
-       
-
-    end
     
     // *IF
     assign inst_sram_en     = 1'b1;     // always
     assign inst_sram_wen    = 4'b0;     // not write
-    assign inst_sram_addr   = PC;
     assign inst_sram_wdata  = 32'b0;    // not write
+    pc pc(
+        .clk            (clk),
+        .resetn         (resetn),
+        .BranchTarget   (),         // TODO: 分支地址
+        .BranchTake     (),         // TODO: 是否分支
+        .exeception     (),         // TODO: 是否有例外
 
-    assign NPC = branch && JUMP ? target : PC+4;
+        .npc            (inst_sram_addr)
+    );
+
     // *ID
     assign inRegData= ;   // TODO:
     assign Imm      =   immXtype == 2'b0  ? {16'b0, IF_ID_IR[15:0]}             :   // zero extend
@@ -124,7 +81,7 @@ module mycpu_top(
         .outB   (regoutb        )
     );
 
-    cu cu(
+    id id(
         .IR         (IF_ID_IR   ),
         .PC         (IF_ID_PC   ),
         .rs         (regouta    ),

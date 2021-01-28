@@ -19,8 +19,6 @@ module alu(
 );
 
 reg             Cin;
-reg     [31:0]  HI;
-reg     [31:0]  LO;
 
 wire    [31:0]  signA   = $signed(A);   // signed A
 wire    [31:0]  signB   = $signed(B);   // signed B  
@@ -52,16 +50,6 @@ always @(*) begin
 
         // ?`LUI_FUN: res          <= B;                            // LUI
 
-        // `MULT   : ;
-        // `MULTU  : ;
-        // `DIV    : ;
-        // `DIVU   : ;
-        // `MTHI   : ;
-        // `MTLO   : ;
-        // `JR     : ;
-        // `JALR   : ;
-        // `SYSCALL: ;
-        // `BREAK  : ;
         default: ; // TODO: ReservedInstruction Exception
     endcase
 end
