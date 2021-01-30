@@ -13,8 +13,9 @@ module alu(
     input       [5 :0]  sa,                 // shift amount
 
     output              IntegerOverflow,    // IntegerOverflow Exception
-    output      [31:0]  res,                // result, 必要时用作 lo
-    output      [31:0]  hi                  // 
+    output      [31:0]  res,                // result
+    output      [31:0]  hi,                 // hi
+    output      [31:0]  lo                  // lo
 );
 
 wire            Cin;
@@ -39,10 +40,12 @@ assign {Cin, res} = func == `ADD    ? {A[31], A} + {B[31], B} :
                     func == `SRLV   ? {1'b0, B >> sav} :
                     func == `SRAV   ? {1'b0, B >>> sav} :
                     func == `MTHI || func == `MTLO ? A :
-                    33'b0;  // TODO:
+                    33'b0;  // TODO: other instruction
 
 
 // *                         ADD,ADDI          SUB,SUBI
 assign IntegerOverflow = (func == `ADD || func == `SUB) && Cin != res[31]; // IntegerOverflow Exception
+
+// TODO: MUL and DIV
 
 endmodule

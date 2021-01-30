@@ -15,11 +15,13 @@ module id(
     output      [31:0]  target          // valid when JUMP == 1
     // *
     output              R,              // 1: R type, 0: non-R
+    output              load,           // 1: load data from data mem, 0:not
     output              imm,            // 1: with immediate, 0: not
     output      [1 :0]  immXtype,       // valid when imm is 1. 0: zero extend
                                         // 1: signed extend, 2: {imm, {16{0}}}
     output              regwen,         // write en on GPRs, 1: write GPR[wreg], 0: not write
     output      [5 :0]  wreg,           // vaild when regwen is 1
+    output      [1 :0]  rhilo,          // 2'b01: read LO, 2'b10: read HI
     output      [1 :0]  whilo,          // 0: not write, whilo[0] == 1: write lo, whilo[1] == 1: write hi
     output              data_en,        // data active en
     output      [3 :0]  data_wen,       // data write en
@@ -31,10 +33,10 @@ module id(
 wire [31:0] BranchTarget    = id_pc + {{14{id_inst[15]}}, {id_inst[15:0], 2'b00}};  // branch target
 wire [31:0] JTarget         = {id_pc[31:28], id_inst[25:0], 2'b00};                 // target of J and JAL
 wire [31:0] JRTarget        = rega;                                                   // target of JR and JALR
-wire [5 :0] opcode          = id_inst[31:26];
-wire [5 :0] rtcode          = id_inst[20:16];
-wire [5 :0] rdcode          = id_inst[15:11];
-wire [5 :0] IR_func         = id_inst[5:0];
+wire [5 :0] opcode          = `GET_OP(id_inst);
+wire [5 :0] rtcode          = `GET_Rt(id_inst);
+wire [5 :0] rdcode          = `GET_Rd(id_inst);
+wire [5 :0] IR_func         = `GET_FUNC(id_inst);
 
 // * 跳转相关
 assign branch   =   (opcode >= `J && opcode <= `BGTZ) || (opcode == `JR_JALR && (IR_func == `JALR || IR_func == `JR)); // *OK
@@ -71,6 +73,8 @@ assign func     =   (opcode == `ADDIU) ? `ADDU :
 assign R        =   opcode == `R_Type && IR_func != `JR && IR_func != `JALR &&
                     IR_func != `SYSCALL && IR_func != `BREAK;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
 
+assign load     =   opcode >= `LB && opcode <= `LHU;
+
 assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || (opcode >= `LB && opcode <= `SW);
 
 assign regwen   =   !whilo && (al || (imm && opcode <= `LHU) || R); // TODO: reg write signal, PRI
@@ -89,6 +93,8 @@ assign data_wen =   opcode == `SB ? 4'b0001:
                     opcode == `SH ? 4'b0011:
                     opcode == `SW ? 4'b1111:
                     4'b0;
+
+assign rhilo    =   {2{opcode == `R_Type}} & {IR_func == `MFHI, IR_func == `MFLO};
 
 assign whilo    =   {2{opcode == `R_Type}} & 
                     (IR_func >= `MULT && IR_func <= `DIVU) ? 2'b11 : {IR_func == `MTHI, IR_func == `MTLO};
