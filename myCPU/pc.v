@@ -7,7 +7,11 @@ module pc(
 
     input               BranchTake,     // 1: take, 0: not take
     input       [31:0]  BranchTarget,   // target address of branch
-    input               exception,     // 1: execption occur, 0: not
+
+    input               exception,      // 1: execption occur, 0: not
+
+    input               eret,           // eret指令
+    input       [31:0]  epc,
     output reg  [31:0]  npc
 );
 
@@ -15,5 +19,5 @@ always @(posedge clk) begin
     if(!resetn) npc <= 32'h0;
     else npc <= exception ? `EXEC_ADDR :
                 BranchTake ? BranchTarget :
-                npc+32'd4;
+                eret ? epc : npc+32'd4;
 end

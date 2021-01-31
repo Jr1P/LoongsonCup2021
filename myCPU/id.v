@@ -16,6 +16,7 @@ module id(
     // *
     output              R,              // 1: R type, 0: non-R
     output              load,           // 1: load data from data mem, 0:not
+    output              loadX,          // valid when load is 1, 1: signed extend data loaded from data mem, 0: zero extend
     output              imm,            // 1: with immediate, 0: not
     output      [1 :0]  immXtype,       // valid when imm is 1. 0: zero extend
                                         // 1: signed extend, 2: {imm, {16{0}}}
@@ -24,10 +25,13 @@ module id(
     output      [1 :0]  rhilo,          // 2'b01: read LO, 2'b10: read HI
     output      [1 :0]  whilo,          // 0: not write, whilo[0] == 1: write lo, whilo[1] == 1: write hi
     output              data_en,        // data active en
+    output      [3 :0]  data_ren,       // 4'b0001: load byte, 4'b0011: load half word, 4'b1111: load word
     output      [3 :0]  data_wen,       // data write en
     output      [5 :0]  func,           // valid when R is 0, use for I type
     // * 例外
-    output              ReservedIns,     // TODO: ReservedInstruction Ex 
+    output              ReservedIns,    // ReservedInstruction Ex 
+    output              BreakEx,        // Break point Ex
+    output              SyscallEx       // System call Ex
 );
 
 wire [31:0] BranchTarget    = id_pc + {{14{id_inst[15]}}, {id_inst[15:0], 2'b00}};  // branch target
@@ -61,23 +65,24 @@ assign jump     =   (opcode == `J || opcode == `JAL) ||
                         )
                     );
 // *
-assign func     =   (opcode == `ADDIU) ? `ADDU :
+assign func     =   (opcode == `ADDI) ? `ADD :
                     (opcode == `SLTI) ? `SLT :
                     (opcode == `SLTIU) ? `SLTU :
                     (opcode == `ANDI) ? `AND :
                     (opcode == `ORI) ? `OR :
                     (opcode == `XORI) ? `XOR :
-                    (opcode == `PRI) ? : // TODO: Privileged Instruction
+                    // (opcode == `PRI) ? : // *Privileged Instruction ADDU即可
                     `ADDU;
 
 assign R        =   opcode == `R_Type && IR_func != `JR && IR_func != `JALR &&
                     IR_func != `SYSCALL && IR_func != `BREAK;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
 
 assign load     =   opcode >= `LB && opcode <= `LHU;
+assign loadX    =   opcode != `LBU && opcode != `LHU;
 
 assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || (opcode >= `LB && opcode <= `SW);
 
-assign regwen   =   !whilo && (al || (imm && opcode <= `LHU) || R); // TODO: reg write signal, PRI
+assign regwen   =   !whilo && (al || (imm && (opcode <= `LHU || load)) || R); // TODO: reg write signal, MFC0
 
 assign wreg     =   R ? rdcode :
                     al ? 6'd31 :
@@ -89,6 +94,10 @@ assign immXtype =   (opcode == `LUI) ? 2'b11:                       // {imm, 16{
 
 assign data_en  =   opcode >= `LB && opcode <= `SW;
 
+assign data_ren =   (opcode == `LB || opcode == `LBU) ? 4'b0001 :
+                    (opcode == `LH || opcode == `LHU) ? 4'b0011 :
+                    (opcode == `LW) ? 4'b1111 : 4'b0;
+
 assign data_wen =   opcode == `SB ? 4'b0001:
                     opcode == `SH ? 4'b0011:
                     opcode == `SW ? 4'b1111:
@@ -98,5 +107,9 @@ assign rhilo    =   {2{opcode == `R_Type}} & {IR_func == `MFHI, IR_func == `MFLO
 
 assign whilo    =   {2{opcode == `R_Type}} & 
                     (IR_func >= `MULT && IR_func <= `DIVU) ? 2'b11 : {IR_func == `MTHI, IR_func == `MTLO};
+
+assign ReservedIns  = ; // TODO: inst table
+assign BreakEx      = opcode == `R_Type && IR_func == `BREAK;
+assign SyscallEx    = opcode == `R_Type && IR_func == `SYSCALL;
 
 endmodule

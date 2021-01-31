@@ -4,15 +4,18 @@ module ex_mem_seg (
     input           clk,
     input           resetn,
     input [31:0]    ex_pc,
+    input [31:0]    ex_inst,
     input [31:0]    ex_res,
     input [31:0]    ex_hi,
     input [31:0]    ex_lo,
     input           ex_R,
     input           ex_load,
+    input           ex_loadX,
     input           ex_al,
     // input           ex_imm,
 
     input           ex_data_en,
+    input [3 :0]    ex_data_ren,
     input [3 :0]    ex_data_wen,
     input [31:0]    ex_wdata,
 
@@ -22,15 +25,18 @@ module ex_mem_seg (
     input [1 :0]    ex_whilo,
 
     output reg [31:0]   mem_pc,
+    output reg [31:0]   mem_inst;
     output reg [31:0]   mem_res,
     output reg [31:0]   mem_hi,
     output reg [31:0]   mem_lo,
     output reg          mem_R,
     output reg          mem_load,
+    output reg          mem_loadX,
     output reg          mem_al,
     // output reg          mem_imm,
 
     output reg          mem_data_en,
+    output reg [3 :0]   mem_data_ren,
     output reg [3 :0]   mem_data_wen,
     output reg [31:0]   mem_wdata,
 
@@ -43,14 +49,17 @@ module ex_mem_seg (
 always @(posedge clk) begin
     if(!resetn) begin
         mem_pc      <= 32'b0;
+        mem_inst    <= 32'b0;
         mem_res     <= 32'b0;
         mem_hi      <= 32'b0;
         mem_lo      <= 32'b0;
         mem_R       <= 1'b0;
         mem_load    <= 1'b0;
+        mem_loadX   <= 1'b0;
         mem_al      <= 1'b0;
         // mem_imm     <= 1'b0;
         mem_data_en <= 1'b0;
+        mem_data_ren<= 4'b0;
         mem_data_wen<= 4'b0;
         mem_wdata   <= 32'b0;
         mem_regwen  <= 1'b0;
@@ -60,15 +69,18 @@ always @(posedge clk) begin
     end
     else begin
         mem_pc      <= ex_pc;
+        mem_inst    <= ex_inst;
         mem_res     <= ex_res;
         mem_hi      <= ex_hi;
         mem_lo      <= ex_lo;
         mem_R       <= ex_R;
         mem_load    <= ex_load;
+        mem_loadX   <= ex_loadX;
         mem_al      <= ex_al;
         // mem_imm     <= ex_imm;
-        mem_data_wen<= ex_data_wen;
         mem_data_en <= ex_data_en;
+        mem_data_ren<= ex_data_ren;
+        mem_data_wen<= ex_data_wen;
         mem_wdata   <= ex_wdata;
         mem_regwen  <= ex_regwen;
         mem_wreg    <= ex_wreg;

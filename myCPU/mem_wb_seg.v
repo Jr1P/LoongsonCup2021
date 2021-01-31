@@ -5,6 +5,7 @@ module mem_wb_seg (
     input           resetn,
 
     input [31:0]    mem_pc,
+    input [31:0]    mem_inst,
     input [31:0]    mem_res,
     input [31:0]    mem_hi,
     input [31:0]    mem_lo,
@@ -17,6 +18,7 @@ module mem_wb_seg (
     input [1 :0]    mem_whilo,
 
     output reg [31:0]   wb_pc,
+    output reg [31:0]   wb_inst,
     output reg [31:0]   wb_res,
     output reg [31:0]   wb_hi,
     output reg [31:0]   wb_lo,
@@ -32,6 +34,7 @@ module mem_wb_seg (
 always @(posedge clk) begin
     if(!resetn) begin
         wb_pc       <= 32'b0;
+        wb_inst     <= 32'b0;
         wb_res      <= 32'b0;
         wb_hi       <= 32'b0;
         wb_lo       <= 32'b0;
@@ -45,6 +48,7 @@ always @(posedge clk) begin
     end
     else begin
         wb_pc       <= mem_pc;
+        wb_inst     <= mem_inst;
         wb_res      <= mem_res;
         wb_hi       <= mem_hi;
         wb_lo       <= mem_lo;

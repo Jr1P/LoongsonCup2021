@@ -73,6 +73,10 @@
 `define BLTZAL  5'b10000
 `define BGEZAL  5'b10001
 
+// * rs code just for PRI
+`define MFC0    5'b00000
+`define MTC0    5'b00100
+
 // *------------------
 `define GET_OP(x) x[31:26]
 `define GET_Rs(x) x[25:21]
