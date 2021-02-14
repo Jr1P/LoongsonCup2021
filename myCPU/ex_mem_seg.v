@@ -8,11 +8,10 @@ module ex_mem_seg (
     input [31:0]    ex_res,
     input [31:0]    ex_hi,
     input [31:0]    ex_lo,
-    input           ex_R,
+    input           ex_SPEC,
     input           ex_load,
     input           ex_loadX,
     input           ex_al,
-    // input           ex_imm,
 
     input           ex_data_en,
     input [3 :0]    ex_data_ren,
@@ -21,6 +20,10 @@ module ex_mem_seg (
 
     input           ex_regwen,
     input [5 :0]    ex_wreg,
+
+    input           ex_cp0ren,
+    input           ex_cp0wen,
+    input [7 :0]    ex_cp0addr,
     input [1 :0]    ex_rhilo,
     input [1 :0]    ex_whilo,
 
@@ -29,7 +32,7 @@ module ex_mem_seg (
     output reg [31:0]   mem_res,
     output reg [31:0]   mem_hi,
     output reg [31:0]   mem_lo,
-    output reg          mem_R,
+    output reg          mem_SPEC,
     output reg          mem_load,
     output reg          mem_loadX,
     output reg          mem_al,
@@ -42,6 +45,10 @@ module ex_mem_seg (
 
     output reg          mem_regwen,
     output reg [5 :0]   mem_wreg,
+
+    output reg          mem_cp0ren,
+    output reg          mem_cp0wen,
+    output reg [7 :0]   mem_cp0addr,
     output reg [1 :0]   mem_rhilo,
     output reg [1 :0]   mem_whilo
 );
@@ -53,17 +60,19 @@ always @(posedge clk) begin
         mem_res     <= 32'b0;
         mem_hi      <= 32'b0;
         mem_lo      <= 32'b0;
-        mem_R       <= 1'b0;
+        mem_SPEC    <= 1'b0;
         mem_load    <= 1'b0;
         mem_loadX   <= 1'b0;
         mem_al      <= 1'b0;
-        // mem_imm     <= 1'b0;
         mem_data_en <= 1'b0;
         mem_data_ren<= 4'b0;
         mem_data_wen<= 4'b0;
         mem_wdata   <= 32'b0;
         mem_regwen  <= 1'b0;
         mem_wreg    <= 6'b0;
+        mem_cp0ren  <= 1'b0;
+        mem_cp0wen  <= 1'b0;
+        mem_cp0addr <= 8'b0;
         mem_rhilo   <= 2'b0;
         mem_whilo   <= 2'b0;
     end
@@ -73,17 +82,19 @@ always @(posedge clk) begin
         mem_res     <= ex_res;
         mem_hi      <= ex_hi;
         mem_lo      <= ex_lo;
-        mem_R       <= ex_R;
+        mem_SPEC    <= ex_SPEC;
         mem_load    <= ex_load;
         mem_loadX   <= ex_loadX;
         mem_al      <= ex_al;
-        // mem_imm     <= ex_imm;
         mem_data_en <= ex_data_en;
         mem_data_ren<= ex_data_ren;
         mem_data_wen<= ex_data_wen;
         mem_wdata   <= ex_wdata;
         mem_regwen  <= ex_regwen;
         mem_wreg    <= ex_wreg;
+        mem_cp0ren  <= ex_cp0ren;
+        mem_cp0wen  <= ex_cp0wen;
+        mem_cp0addr <= ex_cp0addr;
         mem_rhilo   <= ex_rhilo;
         mem_whilo   <= ex_whilo;
     end

@@ -33,7 +33,7 @@
 // *------------------
 
 // * opcode
-`define R_Type  6'b000000
+`define SPEC    6'b000000
 `define JR_JALR 6'b000000
 `define J       6'b000010
 `define JAL     6'b000011
@@ -77,11 +77,23 @@
 `define MFC0    5'b00000
 `define MTC0    5'b00100
 
+`define ERET    32'h84000018
+
+// * ExcCode
+`define INT     5'h00
+`define AdEL    5'h04
+`define AdES    5'h05
+`define Sys     5'h08
+`define Bp      5'h09
+`define RI      5'h0a
+`define Ov      5'h0c
+
 // *------------------
-`define GET_OP(x) x[31:26]
-`define GET_Rs(x) x[25:21]
-`define GET_Rt(x) x[20:16]
-`define GET_Rd(x) x[15:11]
-`define GET_SA(x) x[10:6]
-`define GET_FUNC(x) x[5:0]
-`define GET_Imm(x) x[15:0]
+`define GET_OP(x)   x[31:26]
+`define GET_Rs(x)   x[25:21]
+`define GET_Rt(x)   x[20:16]
+`define GET_Rd(x)   x[15:11]
+`define GET_Imm(x)  x[15:0]
+`define GET_SA(x)   x[10:6]
+`define GET_FUNC(x) x[5 :0]
+`define GET_SEL(x)  x[2 :0]

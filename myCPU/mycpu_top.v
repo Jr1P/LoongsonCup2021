@@ -33,17 +33,21 @@ module mycpu_top(
     wire        id_jump;
     wire        id_regwen;
     wire        id_al;
-    wire        id_R;
+    wire        id_SPEC;
     wire        id_load;
     wire        id_loadX;
     wire        id_branch;
     wire        id_imm;
     wire        id_data_en;
+    wire        id_eret;
     wire [1 :0] id_immXtype;
     wire [3 :0] id_data_ren;
     wire [3 :0] id_data_wen;
     wire [5 :0] id_func;
     wire [5 :0] id_wreg;
+    wire        id_cp0ren;
+    wire        id_cp0wen;
+    wire [7 :0] id_cp0addr;
     wire [1 :0] id_rhilo;
     wire [1 :0] id_whilo;
     wire [31:0] id_pc;
@@ -60,7 +64,7 @@ module mycpu_top(
     wire [31:0] ex_A;
     wire [31:0] ex_B;
     wire        ex_al;
-    wire        ex_R;
+    wire        ex_SPEC;
     wire        ex_load;
     wire        ex_loadX;
     wire [5 :0] ex_ifunc;
@@ -69,6 +73,9 @@ module mycpu_top(
     wire        ex_data_en;
     wire [3 :0] ex_data_ren;
     wire [3 :0] ex_data_wen;
+    wire        ex_cp0ren;
+    wire        ex_cp0wen;
+    wire [7 :0] ex_cp0addr;
     wire [1 :0] ex_whilo;
     wire [1 :0] ex_rhilo;
     // *MEM
@@ -80,7 +87,6 @@ module mycpu_top(
     wire        mem_load;
     wire        mem_loadX;
     wire [3 :0] mem_data_ren;
-    // wire [31:0] mem_wdata;
     wire        mem_regwen;
     wire [1 :0] mem_whilo;
     wire [1 :0] mem_rhilo;
@@ -100,7 +106,7 @@ module mycpu_top(
     wire [1 :0] wb_whilo;
 
     // *IF
-    assign inst_sram_en     = 1'b1;     // always
+    assign inst_sram_en     = 1'b1;     // always enable
     assign inst_sram_wen    = 4'b0;     // not write
     assign inst_sram_wdata  = 32'b0;    // not write
     pc pc(
@@ -108,10 +114,10 @@ module mycpu_top(
         .resetn         (resetn),
         .BranchTarget   (id_target),
         .BranchTake     (id_branch && id_jump),
-        .exeception     (), // TODO:
+        .exeception     (), // TODO: 异常
 
-        .eret           (), // TODO: eret
-        .epc            (),
+        .eret           (id_eret), // * eret
+        .epc            (), // TODO:
         .npc            (inst_sram_addr)
     );
 
@@ -129,7 +135,7 @@ module mycpu_top(
 
     // *ID
     wire [31:0] inRegData;
-    wire [31:0] regouta; // TODO:重定向
+    wire [31:0] regouta; // TODO:
     wire [31:0] regoutb;
     wire [31:0] id_Imm  = id_immXtype == 2'b0  ? {16'b0, `GET_Imm(id_inst)}           :   // zero extend
                         id_immXtype == 2'b01 ? {{16{id_inst[15]}}, `GET_Imm(id_inst)} :   // signed extend
@@ -158,7 +164,7 @@ module mycpu_top(
         .jump       (id_jump),
         .al         (id_al),
         .target     (id_target),
-        .R          (id_R),
+        .SPEC       (id_SPEC),
         .load       (id_load),
         .loadX      (id_loadX),
         .imm        (id_imm),
@@ -170,8 +176,11 @@ module mycpu_top(
         .data_en    (id_data_en),
         .data_ren   (id_data_ren),
         .data_wen   (id_data_wen),
+        .cp0ren     (id_cp0ren),
+        .cp0wen     (id_cp0wen),
+        .cp0addr    (id_cp0addr),
         .func       (id_func),
-        .ReservedIns(ReservedIns), // TODO: ReservedIns Exception
+        .ReservedIns(ReservedIns),
         .BreakEx    (BreakEx),
         .SyscallEx  (SyscallEx)
     );
@@ -186,7 +195,7 @@ module mycpu_top(
         .id_A       (regouta),
         .id_B       (regoutb),
         .id_al      (id_al),
-        .id_R       (id_R),
+        .id_SPEC    (id_SPEC),
         .id_load    (id_load),
         .id_loadX   (id_loadX),
         .id_ifunc   (id_ifunc),
@@ -195,6 +204,9 @@ module mycpu_top(
         .id_data_en (id_data_en),
         .id_data_ren(id_data_ren),
         .id_data_wen(id_data_wen),
+        .id_cp0ren  (id_cp0ren),
+        .id_cp0wen  (id_cp0wen),
+        .id_cp0addr (id_cp0addr),
         .id_rhilo   (id_rhilo),
         .id_whilo   (id_whilo),
 
@@ -205,7 +217,7 @@ module mycpu_top(
         .ex_A       (ex_A),
         .ex_B       (ex_B),
         .ex_al      (ex_al),
-        .ex_R       (ex_R),
+        .ex_SPEC    (ex_SPEC),
         .ex_load    (ex_load),
         .ex_loadX   (ex_loadX),
         .ex_ifunc   (ex_ifunc),
@@ -214,14 +226,17 @@ module mycpu_top(
         .ex_data_en (ex_data_en),
         .ex_data_ren(ex_data_ren),
         .ex_data_wen(ex_data_wen),
+        .ex_cp0ren  (ex_cp0ren),
+        .ex_cp0wen  (ex_cp0wen),
+        .ex_cp0addr (ex_cp0addr),
         .ex_rhilo   (ex_rhilo),
         .ex_whilo   (ex_whilo)
     );
 
     // *EX
-    wire [31:0] inAlu1  = ; // TODO: 重定向
+    wire [31:0] inAlu1  = ; // TODO: ?
     wire [31:0] inAlu2  = ex_imm ? ex_Imm : ;
-    wire [5 :0] ex_func = ex_R ? `GET_FUNC(ex_inst) : ex_ifunc;
+    wire [5 :0] ex_func = ex_SPEC ? `GET_FUNC(ex_inst) : ex_ifunc;
 
     alu alu(
         .clk    (clk),
@@ -231,7 +246,7 @@ module mycpu_top(
         .func   (ex_func),
         .sa     (`GET_SA(ex_inst)),
 
-        .IntegerOverflow    (), // TODO: IntegerOverflow Exception
+        .IntegerOverflow    (IntegerOverflow),
         .res                (ex_res),
         .hi                 (ex_hi),
         .lo                 (ex_lo)
@@ -245,17 +260,19 @@ module mycpu_top(
         .ex_res     (ex_res),
         .ex_hi      (ex_hi),
         .ex_lo      (ex_lo),
-        .ex_R       (ex_R),
+        .ex_SPEC    (ex_SPEC),
         .ex_load    (ex_load),
         .ex_loadX   (ex_loadX),
         .ex_al      (ex_al),
-        // .ex_imm     (ex_imm),
         .ex_data_en (ex_data_en),
         .ex_data_ren(ex_data_ren),
         .ex_data_wen(ex_data_wen),
         .ex_wdata   (ex_B),
         .ex_regwen  (ex_regwen),
         .ex_wreg    (ex_wreg),
+        .ex_cp0ren  (ex_cp0ren),
+        .ex_cp0wen  (ex_cp0wen),
+        .ex_cp0addr (ex_cp0addr),
         .ex_rhilo   (ex_rhilo),
         .ex_whilo   (ex_whilo),
 
@@ -264,17 +281,19 @@ module mycpu_top(
         .mem_res        (mem_res),
         .mem_hi         (mem_hi),
         .mem_lo         (mem_lo),
-        .mem_R          (mem_R),
+        .mem_SPEC       (mem_SPEC),
         .mem_load       (mem_load),
         .mem_loadX      (mem_loadX),
         .mem_al         (mem_al),
-        // .mem_imm        (mem_imm),
         .mem_data_en    (data_sram_en),
         .mem_data_ren   (mem_data_ren),
         .mem_data_wen   (data_sram_wen),
         .mem_wdata      (data_sram_wdata),
         .mem_regwen     (mem_regwen),
         .mem_wreg       (mem_wreg),
+        .mem_cp0ren     (mem_cp0ren),
+        .mem_cp0wen     (mem_cp0wen),
+        .mem_cp0addr    (mem_cp0addr),
         .mem_rhilo      (mem_rhilo),
         .mem_whilo      (mem_whilo)
     );
@@ -282,8 +301,8 @@ module mycpu_top(
     // assign data_sram_en     = ;         // * 这三个信号直接在 ex_mem段连
     // assign data_sram_wen    = ;
     // assign data_sram_wdata  = ;
-    assign data_sram_addr   = mem_res;
-    wire data_ADDRESS_ERROR =   !data_sram_en ? 1'b0 :  // 不访存
+    assign data_sram_addr     = mem_res;
+    assign data_ADDRESS_ERROR = !data_sram_en ? 1'b0 :  // 不访存
                                 mem_load ? (            // load指令
                                     (mem_data_ren == 4'b0001) ? 1'b0 :
                                     (mem_data_ren == 4'b0011) ? data_sram_addr[0] != 1'b0 :
@@ -294,22 +313,31 @@ module mycpu_top(
                                 (mem_data_wen == 4'b1111) ? data_sram_addr[1:0] != 2'b00 : 1'b0;
 
     // TODO: CP0 regs
+    cp0 cp0(
+        .clk    (clk),
+        .resetn (resetn),
+        .wen    (mem_cp0wen),
+        .addr   (mem_cp0addr),
+        .rdata  (mem_cp0rdata)
+    );
 
     mem_wb_seg mem_wb_seg(
-        .clk        (clk),
-        .resetn     (resetn),
-        .mem_pc     (mem_pc),
-        .mem_inst   (mem_inst),
-        .mem_res    (mem_res),
-        .mem_hi     (mem_hi),
-        .mem_lo     (mem_lo),
-        .mem_rdata  (data_sram_rdata),
-        .mem_load   (mem_load),
-        .mem_al     (mem_al),
-        .mem_regwen (mem_regwen),
-        .mem_wreg   (mem_wreg),
-        .mem_rhilo  (mem_rhilo),
-        .mem_whilo  (mem_whilo),
+        .clk            (clk),
+        .resetn         (resetn),
+        .mem_pc         (mem_pc),
+        .mem_inst       (mem_inst),
+        .mem_res        (mem_res),
+        .mem_hi         (mem_hi),
+        .mem_lo         (mem_lo),
+        .mem_rdata      (data_sram_rdata),
+        .mem_load       (mem_load),
+        .mem_al         (mem_al),
+        .mem_regwen     (mem_regwen),
+        .mem_wreg       (mem_wreg),
+        .mem_cp0ren     (mem_cp0ren),
+        .mem_cp0rdata   (mem_cp0rdata),
+        .mem_rhilo      (mem_rhilo),
+        .mem_whilo      (mem_whilo),
 
         .wb_pc      (wb_pc),
         .wb_inst    (wb_inst),
@@ -321,13 +349,13 @@ module mycpu_top(
         .wb_al      (wb_al),
         .wb_regwen  (wb_regwen),
         .wb_wreg    (wb_wreg),
+        .wb_cp0ren  (wb_cp0ren),
+        .wb_cp0rdata(wb_cp0rdata),
         .wb_rhilo   (wb_rhilo),
         .wb_whilo   (wb_whilo)
     );
 
     // *WB
-    //TODO: wire [31:0] whi; EX段增加 ex_whi 和 ex_wlo
-    // wire [31:0] wlo;
     hilo hilo(
         .clk    (clk),
         .resetn (resetn),
