@@ -2,10 +2,9 @@
 
 module cu(
 
+    output 
 );
 
-always @(posedge clk) begin
 
-end
 
 endmodule

@@ -77,16 +77,21 @@
 `define MFC0    5'b00000
 `define MTC0    5'b00100
 
-`define ERET    32'h84000018
-
 // * ExcCode
-`define INT     5'h00
-`define AdEL    5'h04
-`define AdES    5'h05
-`define Sys     5'h08
-`define Bp      5'h09
-`define RI      5'h0a
-`define Ov      5'h0c
+`define EXC_INT     5'h00
+`define EXC_AdEL    5'h04
+`define EXC_AdES    5'h05
+`define EXC_Sys     5'h08
+`define EXC_Bp      5'h09
+`define EXC_RI      5'h0a
+`define EXC_Ov      5'h0c
+
+// * cp0 regs       8'bReg_Sel
+`define BadVAddr    8'b01000_000
+`define Count       8'b01001_000
+`define Status      8'b01100_000
+`define Cause       8'b01101_000
+`define EPC         8'b01110_000
 
 // *------------------
 `define GET_OP(x)   x[31:26]
@@ -97,3 +102,14 @@
 `define GET_SA(x)   x[10:6]
 `define GET_FUNC(x) x[5 :0]
 `define GET_SEL(x)  x[2 :0]
+
+`define LDEC    57
+`define DECBITS `LDEC-1:0
+
+`define DECODED_OPS \
+    op_sll, op_srl, op_sra, op_sllv, op_srlv, op_srav, op_jr, op_jalr, op_syscall, \
+    op_break, op_mfhi, op_mthi, op_mflo, op_mtlo, op_mult, op_multu, op_div, op_divu, op_add, \
+    op_addu, op_sub, op_subu, op_and, op_or, op_xor, op_nor, op_slt, op_sltu, op_bltz, op_bgez, \
+    op_bltzal, op_bgezal, op_j, op_jal, op_beq, op_bne, op_blez, op_bgtz, op_addi, op_addiu, op_slti, \
+    op_sltiu, op_andi, op_ori, op_xori, op_lui, op_mfc0, op_mtc0, op_eret, op_lb, op_lh, op_lw, op_lbu, \
+    op_lhu, op_sb, op_sh, op_sw

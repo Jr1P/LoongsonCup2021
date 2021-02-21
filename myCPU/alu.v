@@ -5,17 +5,13 @@
 // * ERET, MFC0, MTC0, SYSCALL, BREAK do not need ALU
 // ! pay attentin on func
 module alu(
-    input               clk,
-    input               resetn,
     input       [31:0]  A,
     input       [31:0]  B,
     input       [5 :0]  func,               // function code
     input       [5 :0]  sa,                 // shift amount
 
     output              IntegerOverflow,    // IntegerOverflow Exception
-    output      [31:0]  res,                // result
-    output      [31:0]  hi,                 // hi
-    output      [31:0]  lo                  // lo
+    output      [31:0]  res                // result
 );
 
 wire            Cin;

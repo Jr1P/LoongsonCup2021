@@ -22,8 +22,8 @@ module id_ex_seg (
     input           id_cp0ren,
     input           id_cp0wen,
     input [7 :0]    id_cp0addr,
-    input [1 :0]    id_rhilo,
-    input [1 :0]    id_whilo,
+    input [1 :0]    id_hiloren,
+    input [1 :0]    id_hilowen,
 
     output reg [31:0]   ex_pc,
     output reg [31:0]   ex_inst,
@@ -44,8 +44,8 @@ module id_ex_seg (
     output reg          ex_cp0ren,
     output reg          ex_cp0wen,
     output reg [7 :0]   ex_cp0addr,
-    output reg [1 :0]   ex_rhilo,
-    output reg [1 :0]   ex_whilo
+    output reg [1 :0]   ex_hiloren,
+    output reg [1 :0]   ex_hilowen
 );
 
 always @(posedge clk) begin
@@ -69,8 +69,8 @@ always @(posedge clk) begin
         ex_cp0ren   <= 1'b0;
         ex_cp0wen   <= 1'b0;
         ex_cp0addr  <= 8'b0;
-        ex_whilo    <= 2'b0;
-        ex_rhilo    <= 2'b0;
+        ex_hilowen  <= 2'b0;
+        ex_hiloren  <= 2'b0;
     end
     else begin
         ex_pc       <= id_pc;
@@ -92,8 +92,8 @@ always @(posedge clk) begin
         ex_cp0ren   <= id_cp0ren;
         ex_cp0wen   <= id_cp0wen;
         ex_cp0addr  <= id_cp0addr;
-        ex_whilo    <= id_whilo;
-        ex_rhilo    <= id_rhilo;
+        ex_hilowen  <= id_hilowen;
+        ex_hiloren  <= id_hiloren;
     end
 end
 

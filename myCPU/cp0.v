@@ -10,9 +10,9 @@ module cp0 (
     output [31:0]   rdata
 );
 
-reg [31:0] CP0Regs [255:0];
+reg [31:0] CP0Regs[255:0];
 
-always(@posedge clk) begin
+always @(posedge clk) begin
     if(!resetn) begin
         // TODO: initialize CP0Regs
     end

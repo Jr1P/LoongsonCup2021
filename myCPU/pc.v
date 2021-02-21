@@ -9,7 +9,7 @@ module pc(
     input               BranchTake,     // 1: take, 0: not take
     input       [31:0]  BranchTarget,   // target address of branch
 
-    input               exception,      // 1: execption occur, 0: not
+    input               exception,      // 1: exception occur, 0: not
 
     input               eret,           // eret指令
     input       [31:0]  epc,
@@ -23,3 +23,5 @@ always @(posedge clk) begin
                 eret ? epc : 
                 stall ? npc : npc+32'd4;
 end
+
+endmodule
