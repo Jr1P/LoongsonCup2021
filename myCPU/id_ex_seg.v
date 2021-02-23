@@ -3,6 +3,8 @@
 module id_ex_seg (
     input           clk,
     input           resetn,
+    
+    input [`EXBITS] id_ex,
     input [31:0]    id_pc,
     input [31:0]    id_inst,
     input           id_imm,
@@ -13,6 +15,7 @@ module id_ex_seg (
     input           id_SPEC,
     input           id_load,
     input           id_loadX,
+    input           id_bd,
     input [5 :0]    id_ifunc,      // use for I type
     input           id_regwen,
     input [5 :0]    id_wreg,
@@ -25,6 +28,7 @@ module id_ex_seg (
     input [1 :0]    id_hiloren,
     input [1 :0]    id_hilowen,
 
+    output reg [`EXBITS]ex_ex,
     output reg [31:0]   ex_pc,
     output reg [31:0]   ex_inst,
     output reg          ex_imm,
@@ -34,7 +38,8 @@ module id_ex_seg (
     output reg          ex_al,
     output reg          ex_SPEC,
     output reg          ex_load,
-    output reg [3 :0]   ex_loadX,
+    output reg          ex_loadX,
+    output reg          ex_bd,
     output reg [5 :0]   ex_ifunc,
     output reg          ex_regwen,
     output reg [5 :0]   ex_wreg,
@@ -50,6 +55,7 @@ module id_ex_seg (
 
 always @(posedge clk) begin
     if(!resetn) begin
+        ex_ex       <= `NUM_EX'b0;
         ex_pc       <= 32'h0;
         ex_inst     <= 32'h0;
         ex_imm      <= 1'b0;
@@ -60,6 +66,7 @@ always @(posedge clk) begin
         ex_SPEC     <= 1'b0;
         ex_load     <= 1'b0;
         ex_loadX    <= 1'b0;
+        ex_bd       <= 1'b0;
         ex_ifunc    <= 6'h0;
         ex_regwen   <= 1'b0;
         ex_wreg     <= 6'h0;
@@ -73,6 +80,7 @@ always @(posedge clk) begin
         ex_hiloren  <= 2'b0;
     end
     else begin
+        ex_ex       <= id_ex;
         ex_pc       <= id_pc;
         ex_inst     <= id_inst;
         ex_imm      <= id_imm;
@@ -83,6 +91,7 @@ always @(posedge clk) begin
         ex_SPEC     <= id_SPEC;
         ex_load     <= id_load;
         ex_loadX    <= id_loadX;
+        ex_bd       <= id_bd;
         ex_ifunc    <= id_ifunc;
         ex_regwen   <= id_regwen;
         ex_wreg     <= id_wreg;

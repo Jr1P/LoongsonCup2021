@@ -5,7 +5,7 @@ module pc(
     input       clk,
     input       resetn,
 
-    input               stall,          // 1: pipeline stalled
+    //// input               stall,          // 1: pipeline stalled
     input               BranchTake,     // 1: take, 0: not take
     input       [31:0]  BranchTarget,   // target address of branch
 

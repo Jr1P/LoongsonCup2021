@@ -63,7 +63,6 @@
 `define SW      6'b101011
 
 `define PRI     6'b010000   // * PRI means Privileged Instruction
-// TODO: PRI
 
 // *------------------
 
@@ -86,12 +85,33 @@
 `define EXC_RI      5'h0a
 `define EXC_Ov      5'h0c
 
-// * cp0 regs       8'bReg_Sel
-`define BadVAddr    8'b01000_000
-`define Count       8'b01001_000
-`define Status      8'b01100_000
-`define Cause       8'b01101_000
-`define EPC         8'b01110_000
+// *    cp0 regs        8'b  Reg_Sel    (Reg, Sel)
+`define CP0_Index       8'b00000_000    //* (0, 0)
+`define CP0_Random      8'b00001_000    //* (1, 0)
+`define CP0_EntryLo0    8'b00010_000    //* (2, 0)
+`define CP0_EntryLo1    8'b00011_000    //* (3, 0)
+`define CP0_Context     8'b00100_000    //* (4, 0)
+`define CP0_PageMask    8'b00101_000    //* (5, 0)
+`define CP0_Wired       8'b00110_000    //* (6, 0)
+`define CP0_BadVAddr    8'b01000_000    //* (8, 0)
+`define CP0_Count       8'b01001_000    //* (9, 0)
+`define CP0_EntryHi     8'b01010_000    //* (10, 0)
+`define CP0_Compare     8'b01011_000    //* (11, 0)
+`define CP0_Status      8'b01100_000    //* (12, 0)
+`define CP0_Cause       8'b01101_000    //* (13, 0)
+`define CP0_EPC         8'b01110_000    //* (14, 0)
+
+`define NUM_EX      6
+`define EXBITS      `NUM_EX-1:0
+
+// * Status (12, 0)
+`define Status_Bev  22
+`define Status_IM   15:8
+`define Status_EXL  1
+`define Status_IE   0
+
+// * Cause (13, 0)
+`define Cause_IP_SOFTWARE   9:8
 
 // *------------------
 `define GET_OP(x)   x[31:26]

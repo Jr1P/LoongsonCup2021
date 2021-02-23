@@ -25,11 +25,13 @@ module mycpu_top(
 );
     // *wire
     // *Exceptions
-    wire    inst_ADDRESS_ERROR;
-    wire    ReservedIns;
-    wire    IntegerOverflow, BreakEx, SyscallEx;
-    wire    data_ADDRESS_ERROR;    
+    wire    if_inst_ADDRESS_ERROR;
+    wire    id_ReservedIns;
+    wire    ex_IntegerOverflow, id_BreakEx, id_SyscallEx;
+    wire    mem_data_ADDRESS_ERROR;
     // *ID
+    wire [`EXBITS]  id_ex;
+    wire        id_bd;
     wire        id_jump;
     wire        id_regwen;
     wire        id_al;
@@ -54,6 +56,7 @@ module mycpu_top(
     wire [31:0] id_inst;
     wire [31:0] id_target;
     // *EX
+    wire [`EXBITS]  ex_ex;
     wire [31:0] ex_pc;
     wire [31:0] ex_inst;
     wire [31:0] ex_res;
@@ -65,6 +68,7 @@ module mycpu_top(
     wire        ex_SPEC;
     wire        ex_load;
     wire        ex_loadX;
+    wire        ex_bd;
     wire [5 :0] ex_ifunc;
     wire        ex_regwen;
     wire [5 :0] ex_wreg;
@@ -78,11 +82,13 @@ module mycpu_top(
     wire [1 :0] ex_hiloren;
     wire [31:0] ex_hilordata;
     // *MEM
+    wire [`EXBITS]  mem_ex;
     wire [31:0] mem_pc;
     wire [31:0] mem_inst;
     wire [31:0] mem_res;
     wire        mem_load;
     wire        mem_loadX;
+    wire        mem_bd;
     wire        mem_regwen;
     wire [5 :0] mem_wreg;
     wire [3 :0] mem_data_ren;
@@ -109,6 +115,8 @@ module mycpu_top(
     wire [1 :0] wb_hilowen;
     wire [31:0] wb_hilordata;
 
+    wire [31:0] cp0_epc;
+
     // *IF
     assign inst_sram_en     = 1'b1;     // always enable
     assign inst_sram_wen    = 4'b0;     // not write
@@ -118,21 +126,28 @@ module mycpu_top(
         .resetn         (resetn),
         .BranchTarget   (id_target),
         .BranchTake     (id_branch && id_jump),
-        .exception      (), // ??? 异常 from CU
+        .exception      (),
 
         .eret           (id_eret), // * eret
-        // .epc            (), // TODO: epc ? 
+        .epc            (cp0_epc), // TODO: epc from cp0
         .npc            (inst_sram_addr)
     );
 
-    assign inst_ADDRESS_ERROR = inst_sram_addr[1:0] != 2'b00;
+    assign if_inst_ADDRESS_ERROR = inst_sram_addr[1:0] != 2'b00;
+
+    wire [`EXBITS] if_ex = {if_inst_ADDRESS_ERROR, (`NUM_EX-1)'b0};
 
     if_id_seg u_if_id_seg(
         .clk    (clk),
         .resetn (resetn),
-        .if_pc  (inst_sram_addr),
-        .if_inst(inst_sram_rdata),
 
+        .id_branch  (id_branch),
+        .if_ex      (if_ex),
+        .if_pc      (inst_sram_addr),
+        .if_inst    (inst_sram_rdata),
+
+        .id_bd  (id_bd),
+        .id_ex  (id_ex),
         .id_pc  (id_pc),
         .id_inst(id_inst)
     );
@@ -184,14 +199,20 @@ module mycpu_top(
         .cp0wen     (id_cp0wen),
         .cp0addr    (id_cp0addr),
         .func       (id_func),
-        .ReservedIns(ReservedIns),
-        .BreakEx    (BreakEx),
-        .SyscallEx  (SyscallEx)
+
+        .eret       (id_eret),
+        .ReservedIns(id_ReservedIns),
+        .BreakEx    (id_BreakEx),
+        .SyscallEx  (id_SyscallEx)
     );
+
+    wire [`EXBITS] ID_ex = {id_ex[`NUM_EX-1], id_ReservedIns, 1'b0, id_SyscallEx, id_BreakEx, 1'b0};
 
     id_ex_seg u_id_ex_seg(
         .clk        (clk),
         .resetn     (resetn),
+
+        .id_ex      (ID_ex),
         .id_pc      (id_pc),
         .id_inst    (id_inst),
         .id_imm     (id_imm),
@@ -202,6 +223,7 @@ module mycpu_top(
         .id_SPEC    (id_SPEC),
         .id_load    (id_load),
         .id_loadX   (id_loadX),
+        .id_bd      (id_bd),
         .id_ifunc   (id_ifunc),
         .id_regwen  (id_regwen),
         .id_wreg    (id_wreg),
@@ -214,6 +236,7 @@ module mycpu_top(
         .id_hiloren   (id_hiloren),
         .id_hilowen   (id_hilowen),
 
+        .ex_ex      (ex_ex),
         .ex_pc      (ex_pc),
         .ex_inst    (ex_inst),
         .ex_imm     (ex_imm),
@@ -224,6 +247,7 @@ module mycpu_top(
         .ex_SPEC    (ex_SPEC),
         .ex_load    (ex_load),
         .ex_loadX   (ex_loadX),
+        .ex_bd      (ex_bd),
         .ex_ifunc   (ex_ifunc),
         .ex_regwen  (ex_regwen),
         .ex_wreg    (ex_wreg),
@@ -265,25 +289,34 @@ module mycpu_top(
         .func   (ex_func),
         .sa     (`GET_SA(ex_inst)),
 
-        .IntegerOverflow    (IntegerOverflow),
+        .IntegerOverflow    (ex_IntegerOverflow),
         .res                (ex_res)
     );
 
-    // mul u_mul(
+    wire [31:0] mul_hi, mul_lo;
+    mul u_mul( // TODO: 有符号和无符号
+        .A  (inAlu1),
+        .B  (inAlu2),
 
-    // );
+        .hi (mul_hi),
+        .lo (mul_lo)
+    );
+    wire [31:0] div_hi, div_lo;
+    div u_div(
+        .A  (inAlu1),
+        .B  (inAlu2),
 
-    // div u_div(
-
-    // );
+        .hi (div_hi),
+        .lo (div_lo)
+    );
 
     // TODO: write HI LO
     wire [31:0] hiwdata =   ex_func == `MTHI ? ex_A : // *GPR[rs] -> HI
-                            ex_mul ? :
-                            ex_div ? : 32'b0;
+                            ex_mul ? mul_hi :
+                            ex_div ? div_hi : 32'b0;
     wire [31:0] lowdata =   ex_func == `MTLO ? ex_A : // *GPR[rs] -> LO
-                            ex_mul ? :
-                            ex_div ? : 32'b0;
+                            ex_mul ? mul_lo :
+                            ex_div ? div_lo : 32'b0;
 
     hilo u_hilo(
         .clk    (clk),
@@ -295,20 +328,25 @@ module mycpu_top(
         .rdata  (ex_hilordata)
     );
 
+    wire [`NUM_EX] EX_ex = ex_ex | {2'b0, ex_IntegerOverflow, 3'b0};
+
     ex_mem_seg u_ex_mem_seg (
         .clk        (clk),
         .resetn     (resetn),
+
+        .ex_ex      (EX_ex),
         .ex_pc      (ex_pc),
         .ex_inst    (ex_inst),
         .ex_res     (ex_res),
         .ex_SPEC    (ex_SPEC),
         .ex_load    (ex_load),
         .ex_loadX   (ex_loadX),
+        .ex_bd      (ex_bd),
         .ex_al      (ex_al),
         .ex_data_en (ex_data_en),
         .ex_data_ren(ex_data_ren),
         .ex_data_wen(ex_data_wen),
-        .ex_wdata   (ex_B),
+        .ex_wdata   (ex_B),     // *store命令写入的数据, mtc0命令的写入数据
         .ex_regwen  (ex_regwen),
         .ex_wreg    (ex_wreg),
         .ex_cp0ren  (ex_cp0ren),
@@ -318,17 +356,19 @@ module mycpu_top(
         .ex_hilowen     (ex_hilowen),
         .ex_hilordata   (ex_hilowrdata),
 
+        .mem_ex         (mem_ex),
         .mem_pc         (mem_pc),
         .mem_pc         (mem_inst),
         .mem_res        (mem_res),
         .mem_SPEC       (mem_SPEC),
         .mem_load       (mem_load),
         .mem_loadX      (mem_loadX),
+        .mem_bd         (mem_bd),
         .mem_al         (mem_al),
         .mem_data_en    (data_sram_en),     // * data_sram_en
         .mem_data_ren   (mem_data_ren),
         .mem_data_wen   (data_sram_wen),    // * data_sram_wen
-        .mem_wdata      (data_sram_wdata),  // * data_sram_wdata
+        .mem_wdata      (data_sram_wdata),  // * data_sram_wdata: store命令写入的数据, mtc0命令的写入数据
         .mem_regwen     (mem_regwen),
         .mem_wreg       (mem_wreg),
         .mem_cp0ren     (mem_cp0ren),
@@ -340,8 +380,9 @@ module mycpu_top(
     );
 
     // *MEM
-    assign data_sram_addr     = mem_res;
-    assign data_ADDRESS_ERROR = !data_sram_en ? 1'b0 :  // 不访存
+    assign data_sram_addr = mem_res;
+    assign mem_data_ADDRESS_ERROR =
+                                !data_sram_en ? 1'b0 :  // 不访存
                                 mem_load ? (            // load指令
                                     (mem_data_ren == 4'b0001) ? 1'b0 :
                                     (mem_data_ren == 4'b0011) ? data_sram_addr[0] != 1'b0 :
@@ -351,13 +392,38 @@ module mycpu_top(
                                 (mem_data_wen == 4'b0011) ? data_sram_addr[0] != 1'b0 :
                                 (mem_data_wen == 4'b1111) ? data_sram_addr[1:0] != 2'b00 : 1'b0;
 
+    wire [`NUM_EX] MEM_ex = mem_ex | {5'b0, mem_data_ADDRESS_ERROR};
+    wire [4:0] ex_excode =  ext_int ? `EXC_INT :
+                            (MEM_ex[5] || MEM_ex[0] && mem_load) ? `EXC_AdEL :
+                            mem_data_ADDRESS_ERROR ? `EXC_AdES :
+                            MEM_ex[4] ? `EXC_RI : // *RI
+                            MEM_ex[3] ? `EXC_Ov :
+                            MEM_ex[2] ? `EXC_Bp :
+                            MEM_ex[1] ? `EXC_Sys;
+
+    wire [31:0] ex_epc = mem_bd ? mem_pc-32'd4 : mem_pc;
     // TODO: CP0 regs
     cp0 u_cp0(
         .clk    (clk),
         .resetn (resetn),
+
+        .ext_int(ext_int),
+
         .wen    (mem_cp0wen),
         .addr   (mem_cp0addr),
-        .rdata  (mem_cp0rdata)
+        .wdata  (data_sram_wdata),
+        .rdata  (mem_cp0rdata),
+
+        .ex_valid   (),
+        .ex_excode  (ex_excode),
+        .ex_bd      (mem_bd),
+        .ex_epc     (ex_epc),
+        .ex_badvaddr(data_sram_addr),
+        .ex_eret    (),
+
+        .cause      (),
+        .Status     (),
+        .epc        (cp0_epc)
     );
 
     mem_wb_seg u_mem_wb_seg(
@@ -401,7 +467,7 @@ module mycpu_top(
 
     // *debug
     assign debug_wb_pc          = wb_pc;
-    assign debug_wb_rf_wen      = {3'b000, wb_regwen}; // TODO: ? {000, regwen} ? {4{regwen}}
+    assign debug_wb_rf_wen      = {4{wb_regwen}};
     assign debug_wb_rf_wnum     = wb_wreg;
     assign debug_wb_rf_wdata    = inRegData;
 

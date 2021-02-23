@@ -3,6 +3,8 @@
 module ex_mem_seg (
     input           clk,
     input           resetn,
+
+    input [`EXBITS] ex_ex,
     input [31:0]    ex_pc,
     input [31:0]    ex_inst,
     input [31:0]    ex_res,
@@ -10,6 +12,7 @@ module ex_mem_seg (
     input           ex_SPEC,
     input           ex_load,
     input           ex_loadX,
+    input           ex_bd,
     input           ex_al,
 
     input           ex_data_en,
@@ -27,12 +30,14 @@ module ex_mem_seg (
     input [1 :0]    ex_hilowen,
     input [31:0]    ex_hilordata,
 
+    output reg [`EXBITS]mem_ex,
     output reg [31:0]   mem_pc,
     output reg [31:0]   mem_inst,
     output reg [31:0]   mem_res,
     output reg          mem_SPEC,
     output reg          mem_load,
     output reg          mem_loadX,
+    output reg          mem_bd,
     output reg          mem_al,
 
     output reg          mem_data_en,
@@ -53,12 +58,14 @@ module ex_mem_seg (
 
 always @(posedge clk) begin
     if(!resetn) begin
+        mem_ex          <= `EX_NUM'b0;
         mem_pc          <= 32'b0;
         mem_inst        <= 32'b0;
         mem_res         <= 32'b0;
         mem_SPEC        <= 1'b0;
         mem_load        <= 1'b0;
         mem_loadX       <= 1'b0;
+        mem_bd          <= 1'b0;
         mem_al          <= 1'b0;
         mem_data_en     <= 1'b0;
         mem_data_ren    <= 4'b0;
@@ -74,12 +81,14 @@ always @(posedge clk) begin
         mem_hilordata   <= 32'b0;
     end
     else begin
+        mem_ex          <= ex_ex;
         mem_pc          <= ex_pc;
         mem_inst        <= ex_inst;
         mem_res         <= ex_res;
         mem_SPEC        <= ex_SPEC;
         mem_load        <= ex_load;
         mem_loadX       <= ex_loadX;
+        mem_bd          <= ex_bd;
         mem_al          <= ex_al;
         mem_data_en     <= ex_data_en;
         mem_data_ren    <= ex_data_ren;
