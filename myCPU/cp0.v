@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+`include "./head.vh"
 
 module cp0 (
     input           clk,
@@ -6,6 +7,7 @@ module cp0 (
 
     // * interrput
     input  [5 :0]   ext_int,
+    output          ext_int_response, // *中断响应
 
     input           wen,    // *write engine
     input  [7 :0]   addr,   // *write/read address
@@ -13,7 +15,7 @@ module cp0 (
     output [31:0]   rdata,  // *read out data
 
     // * exception occur
-    input           ex_valid,   // * 1: exception occured
+    input           ex_valid,   // * 1: 例外处理
     input [4 :0]    ex_excode,  // * exception code
     input           ex_bd,      // * 1: branch delay slot
     input [31:0]    ex_epc,     // * exception pc
@@ -39,7 +41,7 @@ end
 // *Count (9, 0) | read/write | reset val: null
 reg [31:0] count;
 reg inter_tik;
-wire count_wen = wen && addr == `Count;
+wire count_wen = wen && addr == `CP0_Count;
 always @(posedge clk) begin
     if(!resetn) inter_tik <= 1'b0;
     else        inter_tik <= ~inter_tik;
@@ -49,7 +51,7 @@ end
 
 // *Compare (13, 0) | read/write | reset val: null
 reg [31:0] compare;
-wire compare_wen = wen && addr == `Compare;
+wire compare_wen = wen && addr == `CP0_Compare;
 always @(posedge clk) begin
     if(compare_wen) compare <= wdata;
 end
@@ -65,7 +67,7 @@ reg Status_EXL, Status_IE;  // *read/write  | reset val: 0
 reg [7:0] Status_IM;        // *read/write  | reset val: null
 // *                       22               15:8              1          0
 assign status = {9'b0, Status_Bev, 6'b0, Status_IM, 6'b0, Status_EXL, Status_IE};
-wire status_wen = wen && addr == `Status;
+wire status_wen = wen && addr == `CP0_Status;
 always @(posedge clk) begin
     // * Bev
     if(!resetn)         Status_Bev <= 1'b1;
@@ -88,8 +90,8 @@ reg [1:0] ip_software;  // *read/write  | reset val: 0
 reg [4:0] Cause_ExcCode;
 // *                31       30                15:10        9:8                 6:2
 assign cause = {Cause_BD, Cause_TI, 15'b0, ip_hardware, ip_software, 1'b0, Cause_ExcCode, 2'b0};
-wire cause_wen = wen && addr == `Cause;
-wire [5:0] hardware_int = ext_int | {5'b0, timer_int};
+wire cause_wen = wen && addr == `CP0_Cause;
+wire [5:0] hardware_int = ext_int | {timer_int, 5'b0};
 always @(posedge clk) begin
     // *BD
     if(!resetn)                         Cause_BD <= 1'b0;
@@ -108,18 +110,20 @@ always @(posedge clk) begin
 end
 
 // * EPC (14, 0) | read/write | reset val: null
-wire epc_wen = wen && addr == `EPC;
+wire epc_wen = wen && addr == `CP0_EPC;
 always @(posedge clk) begin
     if(epc_wen)                         epc <= wdata;
     else if(ex_valid && !Status_EXL)    epc <= ex_epc;  // *ex_epc: if Cause.BD is 1, ex_epc为pc-4
 end
+// *                            存在未被屏蔽的中断                 没有例外在处理   中断使能开启
+assign ext_int_response = ({ip_hardware, ip_software} & Status_IM) && !Status_EXL && Status_IE;
 
 assign rdata = 
-        {32{addr == `CP0_BADVADDR   }} & badvaddr   |
-        {32{addr == `CP0_COUNT      }} & count      |
-        {32{addr == `CP0_COMPARE    }} & compare    |
-        {32{addr == `CP0_STATUS     }} & status     |
-        {32{addr == `CP0_CAUSE      }} & cause      |
+        {32{addr == `CP0_BadVAddr   }} & badvaddr   |
+        {32{addr == `CP0_Count      }} & count      |
+        {32{addr == `CP0_Compare    }} & compare    |
+        {32{addr == `CP0_Status     }} & status     |
+        {32{addr == `CP0_Cause      }} & cause      |
         {32{addr == `CP0_EPC        }} & epc        ;
 
 endmodule

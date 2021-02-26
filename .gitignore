@@ -1,0 +1,5 @@
+clk_pll*
+*.log
+inst_ram*
+blk*
+data_ram*

@@ -25,32 +25,37 @@ module id(
     input   [31:0]  rega,         // val in GPR[rs]
     input   [31:0]  regb,         // val in GPR[rt]
     // * 跳转相关
-    output              branch,         // ! 1: conditional branch or unconditional jump, 0: not
-    output              jump,           // 1: jump to target, 0: keep going on
-    output              al,             // 1: save return address, 0: not
-    output      [31:0]  target,         // valid when JUMP == 1
+    output          branch,         // ! 1: conditional branch or unconditional jump, 0: not
+    output          jump,           // 1: jump to target, 0: keep going on
+    output          al,             // 1: save return address, 0: not
+    output  [31:0]  target,         // valid when JUMP == 1
     // *
-    output              SPEC,           // 1: opcode is SPEC, 0: non-SPEC
-    output              load,           // 1: load data from data mem, 0:not
-    output              loadX,          // valid when load is 1, 1: signed extend data loaded from data mem, 0: zero extend
-    output              imm,            // 1: with immediate, 0: not
-    output      [1 :0]  immXtype,       // valid when imm is 1. 0: zero extend
+    output          SPEC,           // 1: opcode is SPEC, 0: non-SPEC
+    output          rs_ren,         // 1: read rs
+    output          rt_ren,         // 1: read rt
+    output          load,           // 1: load data from data mem, 0:not
+    output          loadX,          // valid when load is 1, 1: signed extend data loaded from data mem, 0: zero extend
+    output          imm,            // 1: with immediate, 0: not
+    output  [1 :0]  immXtype,       // valid when imm is 1. 0: zero extend
                                         // 1: signed extend, 2: {imm, {16{0}}}
-    output              regwen,         // write en on GPRs, 1: write GPR[wreg], 0: not write
-    output      [5 :0]  wreg,           // vaild when regwen is 1
+    output          regwen,         // write en on GPRs, 1: write GPR[wreg], 0: not write
+    output  [5 :0]  wreg,           // vaild when regwen is 1
     // * HI LO
-    output      [1 :0]  hiloren,        // 2'b01: read LO, 2'b10: read HI
-    output      [1 :0]  hilowen,        // 0: not write, whilo[0] == 1: write lo, whilo[1] == 1: write hi
+    output          mult,           // 1: mult operation
+    output          div,            // 1: div operation 
+    output          mdsign,        // mul, div sign, 1: signed, 0: unsigned
+    output  [1 :0]  hiloren,        // 2'b01: read LO, 2'b10: read HI
+    output  [1 :0]  hilowen,        // 0: not write, whilo[0] == 1: write lo, whilo[1] == 1: write hi
     // * Data Mem
-    output              data_en,        // data active en
-    output      [3 :0]  data_ren,       // 4'b0001: load byte, 4'b0011: load half word, 4'b1111: load word
-    output      [3 :0]  data_wen,       // data write en
+    output          data_en,        // data active en
+    output  [3 :0]  data_ren,       // 4'b0001: load byte, 4'b0011: load half word, 4'b1111: load word
+    output  [3 :0]  data_wen,       // data write en
     // * cp0
-    output              cp0ren,         // 1: read cp0 at cp0regs[cp0addr]
-    output              cp0wen,         // 1: write cp0 at cp0regs[cp0addr]
-    output      [7 :0]  cp0addr,        // read or write address of cp0regs
+    output          cp0ren,         // 1: read cp0 at cp0regs[cp0addr]
+    output          cp0wen,         // 1: write cp0 at cp0regs[cp0addr]
+    output  [7 :0]  cp0addr,        // read or write address of cp0regs
 
-    output      [5 :0]  func,           // valid when SPEC is 0, use for I type
+    output  [5 :0]  func,           // valid when SPEC is 0, use for I type
     // * 例外
     output  eret,           // eret instruction
     output  ReservedIns,    // ReservedInstruction Ex 
@@ -67,7 +72,6 @@ wire [5 :0] rtcode          = `GET_Rt(id_inst);
 wire [5 :0] rdcode          = `GET_Rd(id_inst);
 wire [5 :0] IR_func         = `GET_FUNC(id_inst);
 wire [2 :0] selcode         = `GET_SEL(id_inst);
-wire MFC0 = opcode == `PRI && rscode == `MFC0;
 
 wire [63:0] op_d, func_d;
 wire [31:0] rs_d, rt_d, rd_d, sa_d;
@@ -75,29 +79,29 @@ wire [31:0] rs_d, rt_d, rd_d, sa_d;
 // * inst table
 decoder #(.bits(6))
     dec_op (
-        .in (`GET_OP(inst)),
+        .in (`GET_OP(id_inst)),
         .out(op_d)
     ),
     dec_func (
-        .in (`GET_FUNC(inst)),
+        .in (`GET_FUNC(id_inst)),
         .out(func_d)
     );
 
 decoder #(.bits(5))
     dec_rs (
-        .in (`GET_Rs(inst)),
+        .in (`GET_Rs(id_inst)),
         .out(rs_d)
     ),
     dec_rt (
-        .in (`GET_Rt(inst)),
+        .in (`GET_Rt(id_inst)),
         .out(rt_d)
     ),
     dec_rd (
-        .in (`GET_Rd(inst)),
+        .in (`GET_Rd(id_inst)),
         .out(rd_d)
     ),
-    dec_rs (
-        .in (`GET_SA(inst)),
+    dec_sa (
+        .in (`GET_SA(id_inst)),
         .out(sa_d)
     );
 
@@ -147,8 +151,8 @@ wire op_andi    = op_d[12];
 wire op_ori     = op_d[13];
 wire op_xori    = op_d[14];
 wire op_lui     = op_d[15];
-wire op_mfc0    = op_d[16] && rs_d[0] && sa_d[0] && inst[5:3] == 3'b0;
-wire op_mtc0    = op_d[16] && rs_d[4] && sa_d[0] && inst[5:3] == 3'b0;
+wire op_mfc0    = op_d[16] && rs_d[0] && sa_d[0] && id_inst[5:3] == 3'b0;
+wire op_mtc0    = op_d[16] && rs_d[4] && sa_d[0] && id_inst[5:3] == 3'b0;
 wire op_eret    = op_d[16] && rs_d[16] && rt_d[0] && rd_d[0] && sa_d[0] && func_d[24];
 wire op_lb      = op_d[32];
 wire op_lh      = op_d[33];
@@ -162,74 +166,71 @@ wire op_sw      = op_d[43];
 assign ReservedIns  = ~|{`DECODED_OPS};
 
 // * 跳转相关
-assign branch   =   (opcode >= `J && opcode <= `BGTZ) || (opcode == `JR_JALR && (IR_func == `JALR || IR_func == `JR)); // *OK
+assign branch   =   (opcode >= `J && opcode <= `BGTZ) || (op_jalr || op_jr); // *OK
 
-assign target   =   (opcode == `J || opcode == `JAL) ? JTarget :
-                    (opcode == `JR_JALR && (IR_func == `JR  || IR_func == `JALR)) ? JRTarget:
-                    BranchTarget;   // *OK
+assign target   =   op_j || op_jal ? JTarget :
+                    op_jr || op_jalr ? JRTarget:
+                    BranchTarget;
 
-assign al       =   (opcode == `JAL) || (opcode == `JR_JALR && IR_func == `JALR) ||
-                    (opcode == `BGEZ_BLTZ_BGEZAL_BLTZAL && (rtcode == `BLTZAL || rtcode == `BGEZAL)); // *OK
+assign al       =   op_jal || op_jalr || op_bltzal || op_bgezal;
 
-assign jump     =   (opcode == `J || opcode == `JAL) ||
-                    (opcode == `JR_JALR && (IR_func == `JALR || IR_func == `JR)) ||
-                    (opcode == `BEQ && rega == regb) ||
-                    (opcode == `BNE && rega != regb) ||
-                    (opcode == `BLEZ && (rega[31] || rega == 0)) ||
-                    (opcode == `BGTZ && (!rega[31] && rega != 0)) ||
-                    (opcode == `BGEZ_BLTZ_BGEZAL_BLTZAL && 
-                        (
-                            ((rtcode == `BLTZ || rtcode == `BLTZAL) && rega[31]) ||
-                            ((rtcode == `BGEZ || rtcode == `BGEZAL) && !rega[31])
-                        )
-                    );
-// *
-assign func     =   (opcode == `ADDI) ? `ADD :
-                    (opcode == `SLTI) ? `SLT :
-                    (opcode == `SLTIU) ? `SLTU :
-                    (opcode == `ANDI) ? `AND :
-                    (opcode == `ORI) ? `OR :
-                    (opcode == `XORI) ? `XOR :
-                    // (opcode == `PRI) ? : // *Privileged Instruction ADDU即可
-                    `ADDU;
+assign jump     =   (op_j || op_jal || op_jalr || op_jr) || // * j
+                    (op_beq && rega == regb) || // *beq
+                    (op_bne && rega != regb) || // *bne
+                    (op_blez && (rega[31] || rega == 0)) || // *blez
+                    (op_bgtz && (!rega[31] && rega != 0)) || // *bgtz
+                    ((op_bltz || op_bltzal) && rega[31]) || // * bltz bltzal
+                    ((op_bgez || op_bgezal) && !rega[31]); // * bgez bgezal
 
+// * 
+assign func     =   op_addi ? `ADD :
+                    op_slti ? `SLT :
+                    op_sltiu? `SLTU :
+                    op_addi ? `AND :
+                    op_xori ? `OR :
+                    op_xori ? `XOR : `ADDU; // *Privileged Instruction  ADDU即可
 
-assign SPEC     =   opcode == `SPEC && IR_func != `JR && IR_func != `JALR &&
-                    IR_func != `SYSCALL && IR_func != `BREAK;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
+assign SPEC     =   opcode == `SPEC && !op_jr && !op_jalr &&
+                    !op_syscall && !op_break;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
 
-assign load     =   opcode >= `LB && opcode <= `LHU;
-assign loadX    =   opcode != `LBU && opcode != `LHU;
+assign rs_ren   =   (SPEC && !op_sll && !op_sra && !op_srl) || imm || op_bne || op_beq || op_jr || op_jalr;
+assign rt_ren   =   SPEC || op_mtc0 || op_beq || op_bne || !data_wen;
 
-assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || (opcode >= `LB && opcode <= `SW);
+assign load     =   op_lb || op_lh || op_lw || op_lbu || op_lhu;
+assign loadX    =   !op_lbu && !op_lhu;
 
-assign regwen   =   !whilo && (al || load || SPEC || MFC0);
+assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || data_en;
+
+assign regwen   =   !hilowen && (al || load || SPEC || op_mfc0);
 
 assign wreg     =   SPEC ? rdcode :
                     al ? 6'd31 :
-                    (imm || MFC0) ? rtcode : 6'd0;
+                    (load || op_mfc0) ? rtcode : 6'd0;
 
-assign immXtype =   (opcode == `LUI) ? 2'b11:                       // {imm, 16{0}}
-                    (opcode >= `ANDI && opcode <= `XORI) ? 2'b00 :  // zero extend
+assign immXtype =   op_lui ? 2'b11:                                 // {imm, 16{0}}
+                    opcode >= `ANDI && opcode <= `XORI ? 2'b00 :    // zero extend
                     2'b01;                                          // signed ex
 
-assign data_en  =   opcode >= `LB && opcode <= `SW;
+assign data_en  =   load || !data_wen;
 
-assign data_ren =   (opcode == `LB || opcode == `LBU) ? 4'b0001 :
-                    (opcode == `LH || opcode == `LHU) ? 4'b0011 :
-                    (opcode == `LW) ? 4'b1111 : 4'b0;
+assign data_ren =   op_lb || op_lbu ? 4'b0001 :
+                    op_lh || op_lhu ? 4'b0011 :
+                    op_lw           ? 4'b1111 : 4'b0;
 
-assign data_wen =   opcode == `SB ? 4'b0001:
-                    opcode == `SH ? 4'b0011:
-                    opcode == `SW ? 4'b1111:
-                    4'b0;
+assign data_wen =   op_sb ? 4'b0001 :
+                    op_sh ? 4'b0011 :
+                    op_sw ? 4'b1111 : 4'b0;
 
-assign hiloren  =   {2{opcode == `SPEC}} & {IR_func == `MFHI, IR_func == `MFLO};
+assign mult     =   op_mult || op_multu;
+assign div      =   op_div || op_divu;
+assign mdsign   =   op_mult || op_div;
 
-assign hilowen  =   {2{opcode == `SPEC}} & 
-                    (IR_func >= `MULT && IR_func <= `DIVU) ? 2'b11 : {IR_func == `MTHI, IR_func == `MTLO};
+assign hiloren  =   {op_mfhi, op_mflo};
 
-assign cp0ren   =   opcode == `PRI && rscode == `MFC0;
-assign cp0wen   =   opcode == `PRI && rscode == `MTC0;
+assign hilowen  =   op_mult || op_multu || op_div || op_divu ? 2'b11 : {op_mthi, op_mtlo};
+
+assign cp0ren   =   op_mfc0;
+assign cp0wen   =   op_mtc0;
 assign cp0addr  =   {rdcode, selcode};
 
 

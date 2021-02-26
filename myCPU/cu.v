@@ -1,25 +1,22 @@
 `timescale 1ns/1ps
 
+// * Pipeline stall and refresh
 module cu(
-    input   [5:0]   ex_int,
-    input           inst_ADDRESS_ERROR, // *if seg
-    input           ReservedIns,        // *id seg
-    input           IntegerOverflow,    // *ex seg
-    input           BreakEx,            // *id seg
-    input           SyscallEx,          // *id seg
-    input           data_ADDRESS_ERROR, // *mem seg
+    input   
+    input
 
-    input   if_bd,
-    input   id_bd,
-    input   ex_bd,
-    input   mem_bd,
 
-    output  stall,
-    output  flash,
-    output  EX
+    output  if_id_stall,
+    output  id_ex_stall,
+    output  ex_mem_stall,
+    output  mem_wb_stall,
+
+    output  if_id_refresh,
+    output  id_ex_refresh,
+    output  ex_mem_refresh,
+    output  mem_wb_refresh
 );
 
-assign EX = (|ex_inst) || inst_ADDRESS_ERROR || ReservedIns || IntegerOverflow || BreakEx || SyscallEx || data_ADDRESS_ERROR;
 
 
 endmodule

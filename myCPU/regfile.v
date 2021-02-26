@@ -17,19 +17,11 @@ module regfile(
     output[31:0]    outB
 );
 
-reg [31:0] GPR[31:0];
-integer i;
-always @(posedge clk) begin
-    if(!resetn) begin
-        for(i = 0; i < 32; i = i+1)
-            GPR[i] <= 32'h0;
-    end
-    else if(wen) begin
-        GPR[wreg] <= wdata;
-    end
-end
+reg [31:0] GPR[31:1];
 
-assign outA = (wen && wreg == rs) ? wdata : GPR[rs];
-assign outB = (wen && wreg == rt) ? wdata : GPR[rt];
+always @(posedge clk) if(wen) GPR[wreg] <= wdata;
+
+assign outA = !rs ? 32'b0 : (wen && wreg == rs) ? wdata : GPR[rs];
+assign outB = !rt ? 32'b0 : (wen && wreg == rt) ? wdata : GPR[rt];
 
 endmodule

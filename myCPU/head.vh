@@ -24,34 +24,33 @@
 `define SLT     6'b101010
 `define SLTU    6'b101011
 
-`define SYSCALL 6'b001100
-`define BREAK   6'b001101
+// `define SYSCALL 6'b001100
+// `define BREAK   6'b001101
 
-`define JR      6'b001000
-`define JALR    6'b001001
+// `define JR      6'b001000
+// `define JALR    6'b001001
 
 // *------------------
 
 // * opcode
 `define SPEC    6'b000000
-`define JR_JALR 6'b000000
+// `define JR_JALR 6'b000000
+// `define BGEZ_BLTZ_BGEZAL_BLTZAL     6'b000001
 `define J       6'b000010
-`define JAL     6'b000011
-`define BEQ     6'b000100
-`define BNE     6'b000101
-`define BLEZ    6'b000110
+// `define JAL     6'b000011
+// `define BEQ     6'b000100
+// `define BNE     6'b000101
+// `define BLEZ    6'b000110
 `define BGTZ    6'b000111
 
 `define ADDI    6'b001000
-`define ADDIU   6'b001001
-`define SLTI    6'b001010
-`define SLTIU   6'b001011
+// `define ADDIU   6'b001001
+// `define SLTI    6'b001010
+// `define SLTIU   6'b001011
 `define ANDI    6'b001100
-`define ORI     6'b001101
+// `define ORI     6'b001101
 `define XORI    6'b001110
 `define LUI     6'b001111
-
-`define BGEZ_BLTZ_BGEZAL_BLTZAL     6'b000001
 
 `define LB      6'b100000
 `define LH      6'b100001
@@ -67,14 +66,14 @@
 // *------------------
 
 // * rt code just for BGEZ_BLTZ_BGEZAL_BLTZAL
-`define BLTZ    5'b00000
-`define BGEZ    5'b00001
-`define BLTZAL  5'b10000
-`define BGEZAL  5'b10001
+// `define BLTZ    5'b00000
+// `define BGEZ    5'b00001
+// `define BLTZAL  5'b10000
+// `define BGEZAL  5'b10001
 
 // * rs code just for PRI
-`define MFC0    5'b00000
-`define MTC0    5'b00100
+// `define MFC0    5'b00000
+// `define MTC0    5'b00100
 
 // * ExcCode
 `define EXC_INT     5'h00
@@ -102,6 +101,7 @@
 `define CP0_EPC         8'b01110_000    //* (14, 0)
 
 `define NUM_EX      6
+`define NUM_EX_1    5
 `define EXBITS      `NUM_EX-1:0
 
 // * Status (12, 0)

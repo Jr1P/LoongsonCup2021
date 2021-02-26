@@ -4,6 +4,9 @@ module if_id_seg(
     input   clk,
     input   resetn,
 
+    input   stall,      // *暂停
+    input   refresh,    // *刷新
+
     input           id_branch,  // 前一条指令是否为分支
     input [`EXBITS] if_ex,
     input [31:0]    if_pc,
@@ -16,13 +19,13 @@ module if_id_seg(
 );
 
 always @(posedge clk) begin
-    if(!resetn) begin
+    if(!resetn || refresh) begin
         id_bd   <= 1'b0;
         id_ex   <= `NUM_EX'b0;
         id_pc   <= 32'h0;
         id_inst <= 32'h0;
     end
-    else begin
+    else if(!stall) begin
         id_bd   <= id_branch;
         id_ex   <= if_ex;
         id_pc   <= if_pc;

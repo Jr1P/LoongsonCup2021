@@ -2,7 +2,6 @@
 `include "./head.vh"
 
 // * ALU
-// * ERET, MFC0, MTC0, SYSCALL, BREAK do not need ALU
 // ! pay attentin on func
 module alu(
     input       [31:0]  A,
@@ -36,10 +35,10 @@ assign {Cin, res} = func == `ADD    ? {A[31], A} + {B[31], B} :
                     func == `SRLV   ? {1'b0, B >> sav} :
                     func == `SRAV   ? {1'b0, B >>> sav} :
                     func == `MTHI || 
-                    func == `MTLO   ? {1'b0, A} : 33'b0;  // TODO: modify if other instruction needs
+                    func == `MTLO   ? {1'b0, A} : 33'b0;  // * modify if other instruction needs
 
 
 // *                         ADD,ADDI          SUB,SUBI
-assign IntegerOverflow = (func == `ADD || func == `SUB) && Cin != res[31]; // IntegerOverflow Exception
+assign IntegerOverflow = (func == `ADD || func == `SUB) && Cin != res[31]; //* IntegerOverflow Exception
 
 endmodule

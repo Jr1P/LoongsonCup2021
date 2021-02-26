@@ -3,12 +3,15 @@
 module ex_mem_seg (
     input           clk,
     input           resetn,
+    
+    input   stall,
+    input   refresh,
 
     input [`EXBITS] ex_ex,
     input [31:0]    ex_pc,
     input [31:0]    ex_inst,
     input [31:0]    ex_res,
-    input [31:0]    ex_hiloren,
+
     input           ex_SPEC,
     input           ex_load,
     input           ex_loadX,
@@ -22,7 +25,8 @@ module ex_mem_seg (
 
     input           ex_regwen,
     input [5 :0]    ex_wreg,
-
+    
+    input           ex_eret,
     input           ex_cp0ren,
     input           ex_cp0wen,
     input [7 :0]    ex_cp0addr,
@@ -48,6 +52,7 @@ module ex_mem_seg (
     output reg          mem_regwen,
     output reg [5 :0]   mem_wreg,
 
+    output reg          mem_eret,
     output reg          mem_cp0ren,
     output reg          mem_cp0wen,
     output reg [7 :0]   mem_cp0addr,
@@ -57,8 +62,8 @@ module ex_mem_seg (
 );
 
 always @(posedge clk) begin
-    if(!resetn) begin
-        mem_ex          <= `EX_NUM'b0;
+    if(!resetn || refresh) begin
+        mem_ex          <= `NUM_EX'b0;
         mem_pc          <= 32'b0;
         mem_inst        <= 32'b0;
         mem_res         <= 32'b0;
@@ -73,6 +78,7 @@ always @(posedge clk) begin
         mem_wdata       <= 32'b0;
         mem_regwen      <= 1'b0;
         mem_wreg        <= 6'b0;
+        mem_eret        <= 1'b0;
         mem_cp0ren      <= 1'b0;
         mem_cp0wen      <= 1'b0;
         mem_cp0addr     <= 8'b0;
@@ -80,7 +86,7 @@ always @(posedge clk) begin
         mem_hilowen     <= 2'b0;
         mem_hilordata   <= 32'b0;
     end
-    else begin
+    else if(!stall) begin
         mem_ex          <= ex_ex;
         mem_pc          <= ex_pc;
         mem_inst        <= ex_inst;
@@ -96,6 +102,7 @@ always @(posedge clk) begin
         mem_wdata       <= ex_wdata;
         mem_regwen      <= ex_regwen;
         mem_wreg        <= ex_wreg;
+        mem_eret        <= ex_eret;
         mem_cp0ren      <= ex_cp0ren;
         mem_cp0wen      <= ex_cp0wen;
         mem_cp0addr     <= ex_cp0addr;
