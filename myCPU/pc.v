@@ -1,11 +1,12 @@
 `timescale 1ns/1ps
 
-`define EXEC_ADDR 32'hbfc00380
+`define EXEC_ADDR   32'hbfc0_0380
+`define RESET_ADDR  32'h0000_0000
 module pc(
     input       clk,
     input       resetn,
 
-    //// input               stall,          // 1: pipeline stalled
+    input               stall,          // 1: pipeline stalled
     input               BranchTake,     // 1: take, 0: not take
     input       [31:0]  BranchTarget,   // target address of branch
 
@@ -17,7 +18,7 @@ module pc(
 );
 
 always @(posedge clk) begin
-    if(!resetn) npc <= 32'h0;
+    if(!resetn) npc <= `RESET_ADDR;
     else npc <= eret ? epc : 
                 exc_oc ? `EXEC_ADDR :
                 BranchTake ? BranchTarget :

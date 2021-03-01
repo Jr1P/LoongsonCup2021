@@ -1,4 +1,4 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
 `include "./head.vh"
 
 module cp0 (
@@ -113,10 +113,10 @@ end
 wire epc_wen = wen && addr == `CP0_EPC;
 always @(posedge clk) begin
     if(epc_wen)                         epc <= wdata;
-    else if(ex_valid && !Status_EXL)    epc <= ex_epc;  // *ex_epc: if Cause.BD is 1, ex_epc为pc-4
+    else if(ex_valid && !Status_EXL)    epc <= ex_epc;  // *ex_epc: if Cause.BD is 1, ex_epc == pc-4
 end
 // *                            存在未被屏蔽的中断                 没有例外在处理   中断使能开启
-assign ext_int_response = ({ip_hardware, ip_software} & Status_IM) && !Status_EXL && Status_IE;
+assign ext_int_response = ({hardware_int, ip_software} & Status_IM) && !Status_EXL && Status_IE;
 
 assign rdata = 
         {32{addr == `CP0_BadVAddr   }} & badvaddr   |

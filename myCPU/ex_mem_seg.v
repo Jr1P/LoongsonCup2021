@@ -24,7 +24,7 @@ module ex_mem_seg (
     input [31:0]    ex_wdata,
 
     input           ex_regwen,
-    input [5 :0]    ex_wreg,
+    input [4 :0]    ex_wreg,
     
     input           ex_eret,
     input           ex_cp0ren,
@@ -50,7 +50,7 @@ module ex_mem_seg (
     output reg [31:0]   mem_wdata,
 
     output reg          mem_regwen,
-    output reg [5 :0]   mem_wreg,
+    output reg [4 :0]   mem_wreg,
 
     output reg          mem_eret,
     output reg          mem_cp0ren,
@@ -77,7 +77,7 @@ always @(posedge clk) begin
         mem_data_wen    <= 4'b0;
         mem_wdata       <= 32'b0;
         mem_regwen      <= 1'b0;
-        mem_wreg        <= 6'b0;
+        mem_wreg        <= 5'b0;
         mem_eret        <= 1'b0;
         mem_cp0ren      <= 1'b0;
         mem_cp0wen      <= 1'b0;

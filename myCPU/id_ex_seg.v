@@ -23,7 +23,7 @@ module id_ex_seg (
     input           id_bd,
     input [5 :0]    id_ifunc,      // use for I type
     input           id_regwen,
-    input [5 :0]    id_wreg,
+    input [4 :0]    id_wreg,
     input           id_data_en,
     input [3 :0]    id_data_ren,
     input [3 :0]    id_data_wen,
@@ -53,7 +53,7 @@ module id_ex_seg (
     output reg          ex_bd,
     output reg [5 :0]   ex_ifunc,
     output reg          ex_regwen,
-    output reg [5 :0]   ex_wreg,
+    output reg [4 :0]   ex_wreg,
     output reg          ex_data_en,
     output reg [3 :0]   ex_data_ren,
     output reg [3 :0]   ex_data_wen,
@@ -86,7 +86,7 @@ always @(posedge clk) begin
         ex_bd       <= 1'b0;
         ex_ifunc    <= 6'h0;
         ex_regwen   <= 1'b0;
-        ex_wreg     <= 6'h0;
+        ex_wreg     <= 5'h0;
         ex_data_en  <= 1'b0;
         ex_data_ren <= 4'b0;
         ex_data_wen <= 4'h0;

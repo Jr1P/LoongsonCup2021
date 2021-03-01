@@ -3,12 +3,13 @@
 module div(
     input [31:0]    A,
     input [31:0]    B,
-    input           sign,   // 1: signed, 0: unsigned
 
-    output [31:0] hi,
-    output [31:0] lo
+
+    output          [63:0]  res,
+    output signed   [63:0]  signedres
 );
 
-assign {hi, lo} = A / B; // TODO: 有符号和无符号
+assign res = {A % B, A / B};
+assign signedres = {$signed(A)%$signed(B), $signed(A)/$signed(B)};
 
 endmodule

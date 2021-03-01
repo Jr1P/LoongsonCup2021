@@ -18,15 +18,12 @@ always @(posedge clk) begin
         lo <= 32'b0;
     end
     else begin
-        if(wen[1] == 1'b1) begin
-            hi <= hiwdata;
-        end
-        if(wen[0] == 1'b1) begin
-            lo <= lowdata;
-        end
+        if(wen[1] == 1'b1) hi <= hiwdata;
+        if(wen[0] == 1'b1) lo <= lowdata;
     end
 end
 
-assign rdata = ren == 2'b01 ? lo : hi;
+assign rdata =  {32{ren[0]}} & lo |
+                {32{ren[1]}} & hi ;
 
 endmodule

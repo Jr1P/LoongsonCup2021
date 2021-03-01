@@ -39,7 +39,7 @@ module id(
     output  [1 :0]  immXtype,       // valid when imm is 1. 0: zero extend
                                         // 1: signed extend, 2: {imm, {16{0}}}
     output          regwen,         // write en on GPRs, 1: write GPR[wreg], 0: not write
-    output  [5 :0]  wreg,           // vaild when regwen is 1
+    output  [4 :0]  wreg,           // vaild when regwen is 1
     // * HI LO
     output          mult,           // 1: mult operation
     output          div,            // 1: div operation 
@@ -67,9 +67,9 @@ wire [31:0] BranchTarget    = id_pc + {{14{id_inst[15]}}, {id_inst[15:0], 2'b00}
 wire [31:0] JTarget         = {id_pc[31:28], id_inst[25:0], 2'b00};                 // target of J and JAL
 wire [31:0] JRTarget        = rega;                                                   // target of JR and JALR
 wire [5 :0] opcode          = `GET_OP(id_inst);
-wire [5 :0] rscode          = `GET_Rs(id_inst);
-wire [5 :0] rtcode          = `GET_Rt(id_inst);
-wire [5 :0] rdcode          = `GET_Rd(id_inst);
+wire [4 :0] rscode          = `GET_Rs(id_inst);
+wire [4 :0] rtcode          = `GET_Rt(id_inst);
+wire [4 :0] rdcode          = `GET_Rd(id_inst);
 wire [5 :0] IR_func         = `GET_FUNC(id_inst);
 wire [2 :0] selcode         = `GET_SEL(id_inst);
 
@@ -166,11 +166,10 @@ wire op_sw      = op_d[43];
 assign ReservedIns  = ~|{`DECODED_OPS};
 
 // * 跳转相关
-assign branch   =   (opcode >= `J && opcode <= `BGTZ) || (op_jalr || op_jr); // *OK
+assign branch   =   (opcode >= `J && opcode <= `BGTZ) || op_jalr || op_jr || op_bltz || op_bgez || op_bltzal || op_bgezal;
 
-assign target   =   op_j || op_jal ? JTarget :
-                    op_jr || op_jalr ? JRTarget:
-                    BranchTarget;
+assign target   =   op_j    || op_jal   ? JTarget   :
+                    op_jr   || op_jalr  ? JRTarget  : BranchTarget;
 
 assign al       =   op_jal || op_jalr || op_bltzal || op_bgezal;
 
@@ -186,15 +185,14 @@ assign jump     =   (op_j || op_jal || op_jalr || op_jr) || // * j
 assign func     =   op_addi ? `ADD :
                     op_slti ? `SLT :
                     op_sltiu? `SLTU :
-                    op_addi ? `AND :
-                    op_xori ? `OR :
-                    op_xori ? `XOR : `ADDU; // *Privileged Instruction  ADDU即可
+                    op_andi ? `AND :
+                    op_ori  ? `OR :
+                    op_xori ? `XOR : `ADDU;
 
-assign SPEC     =   opcode == `SPEC && !op_jr && !op_jalr &&
-                    !op_syscall && !op_break;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
+assign SPEC     =   opcode == `SPEC && !op_jr && !op_jalr && !op_syscall && !op_break;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
 
-assign rs_ren   =   (SPEC && !op_sll && !op_sra && !op_srl) || imm || op_bne || op_beq || op_jr || op_jalr;
-assign rt_ren   =   SPEC || op_mtc0 || op_beq || op_bne || !data_wen;
+assign rs_ren   =   (SPEC && !op_sll && !op_sra && !op_srl) || imm || (branch && !op_j && !op_jal);
+assign rt_ren   =   SPEC || op_mtc0 || op_beq || op_bne || (|data_wen);
 
 assign load     =   op_lb || op_lh || op_lw || op_lbu || op_lhu;
 assign loadX    =   !op_lbu && !op_lhu;
@@ -203,7 +201,7 @@ assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || data_en;
 
 assign regwen   =   !hilowen && (al || load || SPEC || op_mfc0);
 
-assign wreg     =   SPEC ? rdcode :
+assign wreg     =   SPEC || op_jalr ? rdcode :
                     al ? 6'd31 :
                     (load || op_mfc0) ? rtcode : 6'd0;
 
@@ -211,7 +209,7 @@ assign immXtype =   op_lui ? 2'b11:                                 // {imm, 16{
                     opcode >= `ANDI && opcode <= `XORI ? 2'b00 :    // zero extend
                     2'b01;                                          // signed ex
 
-assign data_en  =   load || !data_wen;
+assign data_en  =   load || (|data_wen);
 
 assign data_ren =   op_lb || op_lbu ? 4'b0001 :
                     op_lh || op_lhu ? 4'b0011 :

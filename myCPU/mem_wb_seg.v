@@ -14,7 +14,7 @@ module mem_wb_seg (
     input           mem_load,
     input           mem_al,
     input           mem_regwen,
-    input [5 :0]    mem_wreg,
+    input [4 :0]    mem_wreg,
     input           mem_eret,
     input           mem_cp0ren,
     input [31:0]    mem_cp0rdata,
@@ -29,7 +29,7 @@ module mem_wb_seg (
     output reg          wb_load,
     output reg          wb_al,
     output reg          wb_regwen,
-    output reg [5 :0]   wb_wreg,
+    output reg [4 :0]   wb_wreg,
     output reg          wb_eret,
     output reg          wb_cp0ren,
     output reg [31:0]   wb_cp0rdata,
@@ -47,7 +47,7 @@ always @(posedge clk) begin
         wb_load     <= 1'b0;
         wb_al       <= 1'b0;
         wb_regwen   <= 1'b0;
-        wb_wreg     <= 6'b0;
+        wb_wreg     <= 5'b0;
         wb_eret     <= 1'b0;
         wb_cp0ren   <= 1'b0;
         wb_cp0rdata <= 32'b0;
