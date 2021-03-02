@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 `define EXEC_ADDR   32'hbfc0_0380
-`define RESET_ADDR  32'h0000_0000
+`define RESET_ADDR  32'hbfc0_0000
 module pc(
     input       clk,
     input       resetn,
@@ -24,5 +24,11 @@ always @(posedge clk) begin
                 BranchTake ? BranchTarget :
                 stall ? npc : npc+32'd4;
 end
+
+// assign npc =    !resetn     ? `RESET_ADDR   :
+//                 eret        ? epc           :
+//                 exc_oc      ? `EXEC_ADDR    :
+//                 BranchTake  ? BranchTarget  :
+//                 stall       ? npc           : npc+32'd4;
 
 endmodule

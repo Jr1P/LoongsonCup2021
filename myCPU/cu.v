@@ -2,6 +2,8 @@
 
 // * Pipeline stall and refresh
 module cu(
+    input [31:0]id_pc,
+
     input       mem_regwen,
     input       mem_load,
     input [4:0] mem_wreg,
@@ -43,15 +45,17 @@ wire mem_rel_rs = id_branch && id_rs_ren && mem_regwen && mem_wreg == id_rs;
 wire mem_rel_rt = id_branch && id_rt_ren && mem_regwen && mem_wreg == id_rt;
 wire mem_stall  = !ex_rel_rs && !ex_rel_rt && (mem_rel_rs || mem_rel_rt) && mem_load;
 
+wire load_stall = mem_load && (ex_rs_ren && mem_wreg == ex_rs || ex_rt_ren && mem_wreg == ex_rt);
+
 assign mem_wb_stall = 1'b0;
-assign ex_mem_stall = mem_load && (ex_rs_ren && mem_wreg == ex_rs || ex_rt_ren && mem_wreg == ex_rt);
-assign id_ex_stall = ex_mem_stall || ex_stall || mem_stall;
-assign if_id_stall = ex_mem_stall || id_ex_stall;
+assign ex_mem_stall = 1'b0;
+assign id_ex_stall = load_stall || mem_stall;
+assign if_id_stall = load_stall || ex_stall || mem_stall;
 
 assign if_id_refresh = exc_oc;
-assign id_ex_refresh = exc_oc || if_id_stall;
-assign ex_mem_refresh = exc_oc || id_ex_stall;
-assign mem_wb_refresh = ex_mem_stall;
+assign id_ex_refresh = exc_oc || ex_stall || !id_pc;
+assign ex_mem_refresh = exc_oc || load_stall || mem_stall;
+assign mem_wb_refresh = 1'b0;
 
 endmodule
 

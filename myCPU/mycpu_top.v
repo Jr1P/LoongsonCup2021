@@ -139,6 +139,8 @@ module mycpu_top(
     wire [31:0] cp0_epc;
 
     cu u_cu(
+        .id_pc      (id_pc),
+
         .mem_regwen (mem_regwen),
         .mem_load   (mem_load),
         .mem_wreg   (mem_wreg),
@@ -218,12 +220,12 @@ module mycpu_top(
         .id_branch  (id_branch),
         .if_ex      (if_ex),
         .if_pc      (inst_sram_addr),
-        .if_inst    (inst_sram_rdata),
+        // .if_inst    (inst_sram_rdata),
 
         .id_bd  (id_bd),
         .id_ex  (id_ex),
-        .id_pc  (id_pc),
-        .id_inst(id_inst)
+        .id_pc  (id_pc)
+        // .id_inst(id_inst)
     );
 
     // *ID
@@ -233,6 +235,7 @@ module mycpu_top(
     wire [31:0] id_Imm  =   id_immXtype == 2'b0  ? {16'b0, `GET_Imm(id_inst)}           : // zero extend
                             id_immXtype == 2'b01 ? {{16{id_inst[15]}}, `GET_Imm(id_inst)} : // signed extend
                             {`GET_Imm(id_inst), 16'b0};                                     // {imm, {16{0}}}
+    assign id_inst = inst_sram_rdata;
 
     regfile u_regfile(
         .clk    (clk),
@@ -248,14 +251,14 @@ module mycpu_top(
     );
 
     wire [31:0] re_rs = id_branch && id_rs_ren ? 
-                            {32{ex_regwen && ex_wreg == id_rs}  } & ex_reorder_data   |
-                            {32{mem_regwen && mem_wreg == id_rs}} & mem_reorder_data  |
-                            {32{wb_regwen && wb_wreg == id_rs}  } & wb_reorder_data
+                            ex_regwen && ex_wreg == id_rs   ? ex_reorder_data   :
+                            mem_regwen && mem_wreg == id_rs ? mem_reorder_data  :
+                            wb_regwen && wb_wreg == id_rs   ? wb_reorder_data   : regouta
                         : 32'b0;
     wire [31:0] re_rt = id_branch && id_rt_ren ?
-                            {32{ex_regwen && ex_wreg == id_rt}  } & ex_reorder_data   |
-                            {32{mem_regwen && mem_wreg == id_rt}} & mem_reorder_data  |
-                            {32{wb_regwen && wb_wreg == id_rt}  } & wb_reorder_data
+                            ex_regwen && ex_wreg == id_rt   ? ex_reorder_data   :
+                            mem_regwen && mem_wreg == id_rt ? mem_reorder_data  :
+                            wb_regwen && wb_wreg == id_rt   ? wb_reorder_data   : regoutb
                         : 32'b0;
 
     id u_id(
@@ -493,7 +496,7 @@ module mycpu_top(
  
     assign mem_data_ADDRESS_ERROR = data_sram_en && (mem_load && (mem_data_ren == 4'b0011 && data_sram_addr[0] || mem_data_ren == 4'b1111 && data_sram_addr[1:0] != 2'b00)
                                     || !mem_load && (mem_data_wen == 4'b0011 && data_sram_addr[0] || mem_data_wen == 4'b1111 && data_sram_addr[1:0] != 2'b00));
-                                // !data_sram_en ? 1'b0 :  // 不访�?
+                                // !data_sram_en ? 1'b0 :  // 不访存
                                 // mem_load ? (            // load指令
                                 //     (mem_data_ren == 4'b0001) ? 1'b0 :
                                 //     (mem_data_ren == 4'b0011) ? data_sram_addr[0] != 1'b0 :
@@ -517,7 +520,7 @@ module mycpu_top(
     wire ext_int_response;
     wire [31:0] ex_epc = mem_bd ? mem_pc-32'd4 : mem_pc;
     wire [31:0] cp0_status, cp0_cause;
-    wire ex_valid = cp0_cause[`Status_EXL] ? !wb_eret : // * valid 1 : 表示有例外在处理, 刚送到mem段的例外也算属于在处理
+    wire ex_valid = cp0_cause[`Status_EXL] ? !wb_eret : // * valid 1 : 表示有例外在处理, 刚传到mem段的例外也算属于在处理
                     ext_int_response ? 1'b1 : |MEM_ex;
     wire [31:0] cp0_wdata = wb_regwen && mem_rt == wb_wreg ? wb_reorder_data : mem_wdata;
     assign data_sram_wdata = cp0_wdata; // * 重定向一致 cp0_wdata, data_sram_wdata
@@ -558,7 +561,6 @@ module mycpu_top(
         .mem_pc         (mem_pc),
         .mem_inst       (mem_inst),
         .mem_res        (mem_res),
-        .mem_rdata      (data_sram_rdata),
         .mem_load       (mem_load),
         .mem_al         (mem_al),
         .mem_regwen     (mem_regwen),
@@ -573,7 +575,6 @@ module mycpu_top(
         .wb_pc      (wb_pc),
         .wb_inst    (wb_inst),
         .wb_res     (wb_res),
-        .wb_rdata   (wb_rdata),
         .wb_load    (wb_load),
         .wb_al      (wb_al),
         .wb_regwen  (wb_regwen),
@@ -585,6 +586,8 @@ module mycpu_top(
         .wb_hilowen     (wb_hilowen),
         .wb_hilordata   (wb_hilordata)
     );
+
+    assign wb_rdata = data_sram_rdata;
 
     // *WB
     assign inRegData =  wb_al ? wb_pc + 32'd8 :     // *al: pc+8 -> GPR[31]

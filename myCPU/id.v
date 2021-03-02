@@ -182,12 +182,12 @@ assign jump     =   (op_j || op_jal || op_jalr || op_jr) || // * j
                     ((op_bgez || op_bgezal) && !rega[31]); // * bgez bgezal
 
 // * 
-assign func     =   op_addi ? `ADD :
-                    op_slti ? `SLT :
+assign func     =   op_addi ? `ADD  :
+                    op_slti ? `SLT  :
                     op_sltiu? `SLTU :
-                    op_andi ? `AND :
-                    op_ori  ? `OR :
-                    op_xori ? `XOR : `ADDU;
+                    op_andi ? `AND  :
+                    op_ori  ? `OR   :
+                    op_xori ? `XOR  : `ADDU;
 
 assign SPEC     =   opcode == `SPEC && !op_jr && !op_jalr && !op_syscall && !op_break;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
 
@@ -199,11 +199,11 @@ assign loadX    =   !op_lbu && !op_lhu;
 
 assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || data_en;
 
-assign regwen   =   !hilowen && (al || load || SPEC || op_mfc0);
+assign regwen   =   !(|hilowen) && (al || (imm && !(|data_wen)) || SPEC || op_mfc0);
 
 assign wreg     =   SPEC || op_jalr ? rdcode :
                     al ? 6'd31 :
-                    (load || op_mfc0) ? rtcode : 6'd0;
+                    ((imm && !(|data_wen)) || op_mfc0) ? rtcode : 6'd0;
 
 assign immXtype =   op_lui ? 2'b11:                                 // {imm, 16{0}}
                     opcode >= `ANDI && opcode <= `XORI ? 2'b00 :    // zero extend
