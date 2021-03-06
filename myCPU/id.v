@@ -63,8 +63,9 @@ module id(
     output  SyscallEx       // System call Ex
 );
 
-wire [31:0] BranchTarget    = id_pc + {{14{id_inst[15]}}, {id_inst[15:0], 2'b00}};  // branch target
-wire [31:0] JTarget         = {id_pc[31:28], id_inst[25:0], 2'b00};                 // target of J and JAL
+wire [31:0] delay_slot_pc   = id_pc + 32'd4;
+wire [31:0] BranchTarget    = delay_slot_pc + {{14{id_inst[15]}}, {id_inst[15:0], 2'b00}};  // branch target
+wire [31:0] JTarget         = {delay_slot_pc[31:28], id_inst[25:0], 2'b00};                 // target of J and JAL
 wire [31:0] JRTarget        = rega;                                                   // target of JR and JALR
 wire [5 :0] opcode          = `GET_OP(id_inst);
 wire [4 :0] rscode          = `GET_Rs(id_inst);
@@ -189,7 +190,7 @@ assign func     =   op_addi ? `ADD  :
                     op_ori  ? `OR   :
                     op_xori ? `XOR  : `ADDU;
 
-assign SPEC     =   opcode == `SPEC && !op_jr && !op_jalr && !op_syscall && !op_break;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
+assign SPEC     =   id_inst && opcode == `SPEC && !op_jr && !op_jalr && !op_syscall && !op_break;  // opcode = 0 and not JR,JALR,BREAK,SYSCALL
 
 assign rs_ren   =   (SPEC && !op_sll && !op_sra && !op_srl) || imm || (branch && !op_j && !op_jal);
 assign rt_ren   =   SPEC || op_mtc0 || op_beq || op_bne || (|data_wen);
@@ -199,15 +200,15 @@ assign loadX    =   !op_lbu && !op_lhu;
 
 assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || data_en;
 
+assign immXtype =   op_lui ? 2'b11:                                 // {imm, 16{0}}
+                    opcode >= `ANDI && opcode <= `XORI ? 2'b00 :    // zero extend
+                    2'b01;                                          // signed ex
+
 assign regwen   =   !(|hilowen) && (al || (imm && !(|data_wen)) || SPEC || op_mfc0);
 
 assign wreg     =   SPEC || op_jalr ? rdcode :
                     al ? 6'd31 :
                     ((imm && !(|data_wen)) || op_mfc0) ? rtcode : 6'd0;
-
-assign immXtype =   op_lui ? 2'b11:                                 // {imm, 16{0}}
-                    opcode >= `ANDI && opcode <= `XORI ? 2'b00 :    // zero extend
-                    2'b01;                                          // signed ex
 
 assign data_en  =   load || (|data_wen);
 

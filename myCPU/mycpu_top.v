@@ -137,6 +137,7 @@ module mycpu_top(
     wire [31:0] wb_hilordata;
 
     wire [31:0] cp0_epc;
+    wire id_recode;
 
     cu u_cu(
         .id_pc      (id_pc),
@@ -161,6 +162,8 @@ module mycpu_top(
         .ex_load    (ex_load),
         .ex_cp0ren  (ex_cp0ren),
         .ex_wreg    (ex_wreg),
+
+        .id_recode  (id_recode),
 
         .if_id_stall    (if_id_stall),
         .id_ex_stall    (id_ex_stall),
@@ -210,6 +213,10 @@ module mycpu_top(
     assign if_inst_ADDRESS_ERROR = inst_sram_addr[1:0] != 2'b00;
     wire [`EXBITS] if_ex = {if_inst_ADDRESS_ERROR, `NUM_EX_1'b0};
 
+    wire [31:0] id_pc_tmp, id_inst_tmp;
+    wire [`EXBITS] id_ex_tmp;
+    wire id_bd_tmp;
+
     if_id_seg u_if_id_seg(
         .clk    (clk),
         .resetn (resetn),
@@ -222,20 +229,23 @@ module mycpu_top(
         .if_pc      (inst_sram_addr),
         // .if_inst    (inst_sram_rdata),
 
-        .id_bd  (id_bd),
-        .id_ex  (id_ex),
-        .id_pc  (id_pc)
-        // .id_inst(id_inst)
+        .id_bd  (id_bd_tmp),
+        .id_ex  (id_ex_tmp),
+        .id_pc  (id_pc_tmp)
+        // .id_inst(id_inst_tmp)
     );
 
     // *ID
     wire [31:0] inRegData;
     wire [31:0] regouta, regoutb;
 
-    wire [31:0] id_Imm  =   id_immXtype == 2'b0  ? {16'b0, `GET_Imm(id_inst)}           : // zero extend
+    wire [31:0] id_Imm  =   id_immXtype == 2'b00 ? {16'b0, `GET_Imm(id_inst)}           :   // zero extend
                             id_immXtype == 2'b01 ? {{16{id_inst[15]}}, `GET_Imm(id_inst)} : // signed extend
                             {`GET_Imm(id_inst), 16'b0};                                     // {imm, {16{0}}}
-    assign id_inst = inst_sram_rdata;
+    assign id_inst = id_recode ? ex_inst : inst_sram_rdata;
+    assign id_pc = id_recode ? ex_pc : id_pc_tmp;
+    assign id_ex = id_recode ? ex_ex : id_ex_tmp;
+    assign id_bd = id_recode ? ex_bd : id_bd_tmp;
 
     regfile u_regfile(
         .clk    (clk),
@@ -491,6 +501,7 @@ module mycpu_top(
     );
 
     // *MEM
+    // wire [4:0] mem_rs = `GET_Rs(mem_inst);
     wire [4:0] mem_rt = `GET_Rt(mem_inst);
     assign data_sram_addr = mem_res;
  
@@ -524,7 +535,7 @@ module mycpu_top(
                     ext_int_response ? 1'b1 : |MEM_ex;
     wire [31:0] cp0_wdata = wb_regwen && mem_rt == wb_wreg ? wb_reorder_data : mem_wdata;
     assign data_sram_wdata = cp0_wdata; // * 重定向一致 cp0_wdata, data_sram_wdata
-  
+
     assign mem_exc_oc = !cp0_cause[`Status_EXL] && ex_valid;
     // * CP0 regs
     cp0 u_cp0(
@@ -562,6 +573,7 @@ module mycpu_top(
         .mem_inst       (mem_inst),
         .mem_res        (mem_res),
         .mem_load       (mem_load),
+        // .mem_rdata      (data_sram_rdata),
         .mem_al         (mem_al),
         .mem_regwen     (mem_regwen),
         .mem_wreg       (mem_wreg),
@@ -576,6 +588,7 @@ module mycpu_top(
         .wb_inst    (wb_inst),
         .wb_res     (wb_res),
         .wb_load    (wb_load),
+        // .wb_rdata   (wb_rdata),
         .wb_al      (wb_al),
         .wb_regwen  (wb_regwen),
         .wb_wreg    (wb_wreg),
