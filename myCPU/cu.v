@@ -2,6 +2,9 @@
 
 // * Pipeline stall and refresh
 module cu(
+    input clk,
+    input resetn,
+
     input [31:0]id_pc,
 
     input       mem_regwen,
@@ -26,7 +29,7 @@ module cu(
     input ex_cp0ren,
     input [4:0] ex_wreg,
 
-    output id_recode,
+    output reg id_recode,
 
     output  if_id_stall,
     output  id_ex_stall,
@@ -49,7 +52,10 @@ wire mem_stall  = !ex_rel_rs && !ex_rel_rt && (mem_rel_rs || mem_rel_rt) && mem_
 
 wire load_stall = mem_load && (ex_rs_ren && mem_wreg == ex_rs || ex_rt_ren && mem_wreg == ex_rt);
 
-assign id_recode = load_stall || mem_stall;
+always @(posedge clk) begin
+    if(!resetn) id_recode <= 1'b0;
+    else id_recode <= load_stall || mem_stall;
+end
 
 assign mem_wb_stall = 1'b0;
 assign ex_mem_stall = 1'b0;

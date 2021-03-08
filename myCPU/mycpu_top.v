@@ -47,6 +47,7 @@ module mycpu_top(
     wire [5 :0] id_ifunc;
     wire        id_load;
     wire        id_loadX;
+    wire [3 :0] id_loadV;
     wire        id_imm;
     wire [1 :0] id_immXtype;
     wire        id_eret;
@@ -80,6 +81,7 @@ module mycpu_top(
     wire        ex_SPEC;
     wire        ex_load;
     wire        ex_loadX;
+    wire [3 :0] ex_loadV;
     wire        ex_bd;
     wire [5 :0] ex_ifunc;
     wire        ex_regwen;
@@ -102,8 +104,10 @@ module mycpu_top(
     wire [31:0] mem_pc;
     wire [31:0] mem_inst;
     wire [31:0] mem_res;
+    wire        mem_al;
     wire        mem_load;
     wire        mem_loadX;
+    wire [3 :0] mem_loadV;
     wire        mem_bd;
     wire        mem_regwen;
     wire [4 :0] mem_wreg;
@@ -126,6 +130,8 @@ module mycpu_top(
     wire [31:0] wb_res;
     wire [31:0] wb_rdata;
     wire        wb_load;
+    wire        wb_loadX;
+    wire [3 :0] wb_loadV;
     wire        wb_al;
     wire        wb_regwen;
     wire [4 :0] wb_wreg;
@@ -139,7 +145,20 @@ module mycpu_top(
     wire [31:0] cp0_epc;
     wire id_recode;
 
+    wire  if_id_stall;
+    wire  id_ex_stall;
+    wire  ex_mem_stall;
+    wire  mem_wb_stall;
+
+    wire  if_id_refresh;
+    wire  id_ex_refresh;
+    wire  ex_mem_refresh;
+    wire  mem_wb_refres;
+
     cu u_cu(
+        .clk    (clk),
+        .resetn (resetn),
+
         .id_pc      (id_pc),
 
         .mem_regwen (mem_regwen),
@@ -177,8 +196,8 @@ module mycpu_top(
 );
 
     // * 重定向数据
-    wire [31:0] ex_reorder_data =   {32{|ex_hiloren}} & mem_hilordata   |   //* ex段读HI/LO写ex段的rs
-                                    {32{ex_al}     } & (mem_pc+32'd8)   |   //* ex段al写GPR[31]
+    wire [31:0] ex_reorder_data =   {32{|ex_hiloren}} & ex_hilordata    |   //* ex段读HI/LO写ex段的rs
+                                    {32{ex_al}     } & (ex_pc+32'd8)    |   //* ex段al写GPR[31]
                                     {32{!ex_load && !ex_cp0ren && !(|ex_hiloren) && !ex_al}} & ex_res;
 
     wire [31:0] mem_reorder_data=   {32{mem_cp0ren} } & mem_cp0rdata    |   //* mem段读cp0写ex段rs
@@ -242,10 +261,10 @@ module mycpu_top(
     wire [31:0] id_Imm  =   id_immXtype == 2'b00 ? {16'b0, `GET_Imm(id_inst)}           :   // zero extend
                             id_immXtype == 2'b01 ? {{16{id_inst[15]}}, `GET_Imm(id_inst)} : // signed extend
                             {`GET_Imm(id_inst), 16'b0};                                     // {imm, {16{0}}}
-    assign id_inst = id_recode ? ex_inst : inst_sram_rdata;
-    assign id_pc = id_recode ? ex_pc : id_pc_tmp;
-    assign id_ex = id_recode ? ex_ex : id_ex_tmp;
-    assign id_bd = id_recode ? ex_bd : id_bd_tmp;
+    assign id_inst  = id_recode ? ex_inst   : inst_sram_rdata;
+    assign id_pc    = id_recode ? ex_pc     : id_pc_tmp;
+    assign id_ex    = id_recode ? ex_ex     : id_ex_tmp;
+    assign id_bd    = id_recode ? ex_bd     : id_bd_tmp;
 
     regfile u_regfile(
         .clk    (clk),
@@ -286,6 +305,7 @@ module mycpu_top(
         .rt_ren     (id_rt_ren),
         .load       (id_load),
         .loadX      (id_loadX),
+        .loadV      (id_loadV),
         .imm        (id_imm),
         .immXtype   (id_immXtype),
         .regwen     (id_regwen),
@@ -331,6 +351,7 @@ module mycpu_top(
         .id_SPEC    (id_SPEC),
         .id_load    (id_load),
         .id_loadX   (id_loadX),
+        .id_loadV   (id_loadV),
         .id_bd      (id_bd),
         .id_ifunc   (id_ifunc),
         .id_regwen  (id_regwen),
@@ -361,6 +382,7 @@ module mycpu_top(
         .ex_SPEC    (ex_SPEC),
         .ex_load    (ex_load),
         .ex_loadX   (ex_loadX),
+        .ex_loadV   (ex_loadV),
         .ex_bd      (ex_bd),
         .ex_ifunc   (ex_ifunc),
         .ex_regwen  (ex_regwen),
@@ -457,9 +479,10 @@ module mycpu_top(
         .ex_pc      (ex_pc),
         .ex_inst    (ex_inst),
         .ex_res     (ex_res),
-        .ex_SPEC    (ex_SPEC),
+        // .ex_SPEC    (ex_SPEC),
         .ex_load    (ex_load),
         .ex_loadX   (ex_loadX),
+        .ex_loadV   (ex_loadV),
         .ex_bd      (ex_bd),
         .ex_al      (ex_al),
         .ex_data_en (ex_data_en),
@@ -480,9 +503,10 @@ module mycpu_top(
         .mem_pc         (mem_pc),
         .mem_inst       (mem_inst),
         .mem_res        (mem_res),
-        .mem_SPEC       (mem_SPEC),
+        // .mem_SPEC       (mem_SPEC),
         .mem_load       (mem_load),
         .mem_loadX      (mem_loadX),
+        .mem_loadV      (mem_loadV),
         .mem_bd         (mem_bd),
         .mem_al         (mem_al),
         .mem_data_en    (data_sram_en),     // * data_sram_en
@@ -573,6 +597,8 @@ module mycpu_top(
         .mem_inst       (mem_inst),
         .mem_res        (mem_res),
         .mem_load       (mem_load),
+        .mem_loadX      (mem_loadX),
+        .mem_loadV      (mem_loadV),
         // .mem_rdata      (data_sram_rdata),
         .mem_al         (mem_al),
         .mem_regwen     (mem_regwen),
@@ -588,6 +614,8 @@ module mycpu_top(
         .wb_inst    (wb_inst),
         .wb_res     (wb_res),
         .wb_load    (wb_load),
+        .wb_loadX   (wb_loadX),
+        .wb_loadV   (wb_loadV),
         // .wb_rdata   (wb_rdata),
         .wb_al      (wb_al),
         .wb_regwen  (wb_regwen),
@@ -600,14 +628,18 @@ module mycpu_top(
         .wb_hilordata   (wb_hilordata)
     );
 
-    assign wb_rdata = data_sram_rdata;
+    assign wb_rdata[7 : 0] =    {8{wb_loadV[0]}} & data_sram_rdata[7:0] ;
+    assign wb_rdata[15: 8] =    {8{wb_loadV[1]}} & data_sram_rdata[15:8] |
+                                {8{!wb_loadV[1] && wb_loadX && data_sram_rdata[7]}};
+    assign wb_rdata[31:16] =    {16{wb_loadV[2] && wb_loadV[3]}} & data_sram_rdata[31:16]   |
+                                {16{!wb_loadV[2] && wb_loadV[3] && wb_loadX && data_sram_rdata[15]}};
 
     // *WB
-    assign inRegData =  wb_al ? wb_pc + 32'd8 :     // *al: pc+8 -> GPR[31]
-                        wb_load ? wb_rdata :        // *load: data from mem -> GPR[rt]
-                        wb_cp0ren ? wb_cp0rdata :      // *MFC0: data from CP0 -> GPR[rt]
-                        |wb_hiloren ? wb_hilordata : // *MFHI/LO: data from HI/LO -> GPR[rd]
-                        wb_res; // *SPEC: data from ALU -> GPR[rd]
+    assign inRegData =  {32{wb_al}      } & (wb_pc + 32'd8) |   // *al: pc+8 -> GPR[31]
+                        {32{wb_load}    } & wb_rdata        |   // *load: data from mem -> GPR[rt]
+                        {32{wb_cp0ren}  } & wb_cp0rdata     |   // *MFC0: data from CP0 -> GPR[rt]
+                        {32{|wb_hiloren}} & wb_hilordata    |   // *MFHI/LO: data from HI/LO -> GPR[rd]
+                        {32{!wb_al && !wb_load && !wb_cp0ren && !(|wb_hiloren)}} & wb_res; // *SPEC: data from ALU -> GPR[rd]
 
     // *debug
     assign debug_wb_pc          = wb_pc;

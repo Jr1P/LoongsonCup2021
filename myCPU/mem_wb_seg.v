@@ -11,6 +11,8 @@ module mem_wb_seg (
     input [31:0]    mem_inst,
     input [31:0]    mem_res,
     input           mem_load,
+    input           mem_loadX,
+    input [3 :0]    mem_loadV,
     input           mem_al,
     input           mem_regwen,
     input [4 :0]    mem_wreg,
@@ -25,6 +27,8 @@ module mem_wb_seg (
     output reg [31:0]   wb_inst,
     output reg [31:0]   wb_res,
     output reg          wb_load,
+    output reg          wb_loadX,
+    output reg [3 :0]   wb_loadV,
     output reg          wb_al,
     output reg          wb_regwen,
     output reg [4 :0]   wb_wreg,
@@ -42,6 +46,8 @@ always @(posedge clk) begin
         wb_inst     <= 32'b0;
         wb_res      <= 32'b0;
         wb_load     <= 1'b0;
+        wb_loadX    <= 1'b0;
+        wb_loadV    <= 4'b0;
         wb_al       <= 1'b0;
         wb_regwen   <= 1'b0;
         wb_wreg     <= 5'b0;
@@ -57,6 +63,8 @@ always @(posedge clk) begin
         wb_inst     <= mem_inst;
         wb_res      <= mem_res;
         wb_load     <= mem_load;
+        wb_loadX    <= mem_loadX;
+        wb_loadV    <= mem_loadV;
         wb_al       <= mem_al;
         wb_regwen   <= mem_regwen;
         wb_wreg     <= mem_wreg;
