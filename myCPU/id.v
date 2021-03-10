@@ -35,7 +35,7 @@ module id(
     output          rt_ren,         // 1: read rt
     output          load,           // 1: load data from data mem, 0:not
     output          loadX,          // valid when load is 1, 1: signed extend data loaded from data mem, 0: zero extend
-    output  [3 :0]  loadV,          // loadV[i] = 1 means the i-th Byte from data mem is valid
+    output  [3 :0]  lsV,            // load store vaild, lsV[i] = 1 means the i-th Byte from data mem(or into data mem) is valid
     output          imm,            // 1: with immediate, 0: not
     output  [1 :0]  immXtype,       // valid when imm is 1. 0: zero extend
                                         // 1: signed extend, 2: {imm, {16{0}}}
@@ -198,7 +198,7 @@ assign rt_ren   =   SPEC || op_mtc0 || op_beq || op_bne || (|data_wen);
 
 assign load     =   op_lb || op_lh || op_lw || op_lbu || op_lhu;
 assign loadX    =   !op_lbu && !op_lhu;
-assign loadV    =   {3'b000, op_lb || op_lbu} | {2'b00, {2{op_lh || op_lhu}}} | {4{op_lw}};
+assign lsV      =   {3'b000, op_lb || op_lbu || op_sb} | {2'b00, {2{op_lh || op_lhu || op_sh}}} | {4{op_lw || op_sw}};
 
 assign imm      =   (opcode >= `ADDI && opcode <= `LUI) || data_en;
 

@@ -14,7 +14,7 @@ module ex_mem_seg (
 
     input           ex_load,
     input           ex_loadX,
-    input [3 :0]    ex_loadV,
+    input [3 :0]    ex_lsV,
     input           ex_bd,
     input           ex_al,
 
@@ -40,7 +40,7 @@ module ex_mem_seg (
     output reg [31:0]   mem_res,
     output reg          mem_load,
     output reg          mem_loadX,
-    output reg [3 :0]   mem_loadV,
+    output reg [3 :0]   mem_lsV,
     output reg          mem_bd,
     output reg          mem_al,
 
@@ -69,7 +69,7 @@ always @(posedge clk) begin
         mem_res         <= 32'b0;
         mem_load        <= 1'b0;
         mem_loadX       <= 1'b0;
-        mem_loadV       <= 4'b0;
+        mem_lsV         <= 4'b0;
         mem_bd          <= 1'b0;
         mem_al          <= 1'b0;
         mem_data_en     <= 1'b0;
@@ -93,7 +93,7 @@ always @(posedge clk) begin
         mem_res         <= ex_res;
         mem_load        <= ex_load;
         mem_loadX       <= ex_loadX;
-        mem_loadV       <= ex_loadV;
+        mem_lsV         <= ex_lsV;
         mem_bd          <= ex_bd;
         mem_al          <= ex_al;
         mem_data_en     <= ex_data_en;

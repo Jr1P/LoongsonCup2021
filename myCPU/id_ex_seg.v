@@ -1,13 +1,16 @@
 `timescale 1ns/1ps
 
 module id_ex_seg (
-    input           clk,
-    input           resetn,
+    input   clk,
+    input   resetn,
+    input   recode,
 
     input   stall,
     input   refresh,
-    
-    input [`EXBITS] id_ex,
+
+    input id_addr_error,    
+    input [`NUM_EX_1-1:0] id_ex,
+
     input [31:0]    id_pc,
     input [31:0]    id_inst,
     input           id_imm,
@@ -20,7 +23,7 @@ module id_ex_seg (
     input           id_SPEC,
     input           id_load,
     input           id_loadX,
-    input [3 :0]    id_loadV,
+    input [3 :0]    id_lsV,
     input           id_bd,
     input [5 :0]    id_ifunc,      // use for I type
     input           id_regwen,
@@ -38,7 +41,9 @@ module id_ex_seg (
     input [1 :0]    id_hiloren,
     input [1 :0]    id_hilowen,
 
-    output reg [`EXBITS]ex_ex,
+    output reg ex_addr_error,
+    output reg [`NUM_EX_1-1:0]ex_ex,
+    
     output reg [31:0]   ex_pc,
     output reg [31:0]   ex_inst,
     output reg          ex_imm,
@@ -51,7 +56,7 @@ module id_ex_seg (
     output reg          ex_SPEC,
     output reg          ex_load,
     output reg          ex_loadX,
-    output reg [3 :0]   ex_loadV,
+    output reg [3 :0]   ex_lsV,
     output reg          ex_bd,
     output reg [5 :0]   ex_ifunc,
     output reg          ex_regwen,
@@ -72,9 +77,22 @@ module id_ex_seg (
 
 always @(posedge clk) begin
     if(!resetn || refresh) begin
-        ex_ex       <= `NUM_EX'b0;
-        ex_pc       <= 32'h0;
-        ex_inst     <= 32'h0;
+        ex_pc           <= 32'h0;
+        ex_inst         <= 32'h0;
+        ex_bd           <= 1'b0;
+        ex_addr_error   <= 1'b0;
+    end
+    else if(!stall && !recode) begin
+        ex_pc           <= id_pc;
+        ex_inst         <= id_inst;
+        ex_bd           <= id_bd;
+        ex_addr_error   <= id_addr_error;
+    end
+end
+
+always @(posedge clk) begin
+    if(!resetn || refresh) begin
+        ex_ex       <= `NUM_EX_1'b0;
         ex_imm      <= 1'b0;
         ex_Imm      <= 32'h0;
         ex_A        <= 32'h0;
@@ -85,8 +103,7 @@ always @(posedge clk) begin
         ex_SPEC     <= 1'b0;
         ex_load     <= 1'b0;
         ex_loadX    <= 1'b0;
-        ex_loadV    <= 4'b0;
-        ex_bd       <= 1'b0;
+        ex_lsV      <= 4'b0;
         ex_ifunc    <= 6'h0;
         ex_regwen   <= 1'b0;
         ex_wreg     <= 5'h0;
@@ -105,8 +122,6 @@ always @(posedge clk) begin
     end
     else if(!stall) begin
         ex_ex       <= id_ex;
-        ex_pc       <= id_pc;
-        ex_inst     <= id_inst;
         ex_imm      <= id_imm;
         ex_Imm      <= id_Imm;
         ex_A        <= id_A;
@@ -117,8 +132,7 @@ always @(posedge clk) begin
         ex_SPEC     <= id_SPEC;
         ex_load     <= id_load;
         ex_loadX    <= id_loadX;
-        ex_loadV    <= id_loadV;
-        ex_bd       <= id_bd;
+        ex_lsV      <= id_lsV;
         ex_ifunc    <= id_ifunc;
         ex_regwen   <= id_regwen;
         ex_wreg     <= id_wreg;

@@ -21,8 +21,8 @@ always @(posedge clk) begin
     if(!resetn) npc <= `RESET_ADDR;
     else npc <= eret ? epc : 
                 exc_oc ? `EXEC_ADDR :
-                BranchTake ? BranchTarget :
-                stall ? npc : npc+32'd4;
+                stall ? npc :
+                BranchTake ? BranchTarget : npc+32'd4;
 end
 
 // assign npc =    !resetn     ? `RESET_ADDR   :

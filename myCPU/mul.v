@@ -10,6 +10,6 @@ module mul(
 );
 
 assign res = A * B;
-assign signres = $signed(A) * $signed(B);
+assign signedres = $signed(A) * $signed(B);
 
 endmodule
