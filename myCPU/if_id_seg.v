@@ -33,4 +33,11 @@ always @(posedge clk) begin
     end
 end
 
+// // inst update at negedge clk, because pc updates at posedge
+// always @(negedge clk) begin
+//     if(!resetn || refresh)  id_inst <= 32'h0;
+//     else if(!stall)         id_inst <= if_inst;
+// end
+
+
 endmodule

@@ -102,7 +102,7 @@
 
 `define NUM_EX      6
 `define NUM_EX_1    5
-`define EXBITS      `NUM_EX-1:0
+`define EXBITS      `NUM_EX_1:0
 
 // * Status (12, 0)
 `define Status_Bev  22
