@@ -218,7 +218,7 @@ assign data_ren =   op_lb || op_lbu ? 4'b0001 :
                     op_lh || op_lhu ? 4'b0011 :
                     op_lw           ? 4'b1111 : 4'b0;
 
-assign data_wen =   {3'b000, op_sb} | {2'b00, {2{op_sb}}} | {4{op_sw}};
+assign data_wen =   {3'b000, op_sb} | {2'b00, {2{op_sh}}} | {4{op_sw}};
 
 assign mult     =   op_mult || op_multu;
 assign div      =   op_div || op_divu;

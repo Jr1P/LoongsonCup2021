@@ -13,6 +13,7 @@ module mem_wb_seg (
     input           mem_load,
     input           mem_loadX,
     input [3 :0]    mem_lsV,
+    input [1 :0]    mem_data_addr,
     input           mem_al,
     input           mem_regwen,
     input [4 :0]    mem_wreg,
@@ -29,6 +30,7 @@ module mem_wb_seg (
     output reg          wb_load,
     output reg          wb_loadX,
     output reg [3 :0]   wb_lsV,
+    output reg [1 :0]   wb_data_addr,
     output reg          wb_al,
     output reg          wb_regwen,
     output reg [4 :0]   wb_wreg,
@@ -48,6 +50,7 @@ always @(posedge clk) begin
         wb_load     <= 1'b0;
         wb_loadX    <= 1'b0;
         wb_lsV      <= 4'b0;
+        wb_data_addr<= 2'b0;
         wb_al       <= 1'b0;
         wb_regwen   <= 1'b0;
         wb_wreg     <= 5'b0;
@@ -65,6 +68,7 @@ always @(posedge clk) begin
         wb_load     <= mem_load;
         wb_loadX    <= mem_loadX;
         wb_lsV      <= mem_lsV;
+        wb_data_addr<= mem_data_addr;
         wb_al       <= mem_al;
         wb_regwen   <= mem_regwen;
         wb_wreg     <= mem_wreg;

@@ -15,12 +15,12 @@ module cp0 (
     output [31:0]   rdata,  // *read out data
 
     // * exception occur
-    input           ex_valid,   // * 1: 例外处理
-    input [4 :0]    ex_excode,  // * exception code
-    input           ex_bd,      // * 1: branch delay slot
-    input [31:0]    ex_epc,     // * exception pc
-    input [31:0]    ex_badvaddr,// * exception BadVAddr
-    input           ex_eret,    // * 1: eret
+    input           exc_valid,   // * 1: 例外处理
+    input [4 :0]    exc_excode,  // * exception code
+    input           exc_bd,      // * 1: branch delay slot
+    input [31:0]    exc_epc,     // * exception pc
+    input [31:0]    exc_badvaddr,// * exception BadVAddr
+    input           exc_eret,    // * 1: eret
 
     // * cp0 regs
     output [31:0]       cause,
@@ -29,13 +29,13 @@ module cp0 (
 );
 
 // * address wrong (if seg, mem seg)
-wire ex_mem = ex_excode == `EXC_AdEL
-            | ex_excode == `EXC_AdES;
+wire exc_mem = exc_excode == `EXC_AdEL
+             | exc_excode == `EXC_AdES;
 
 // *BadVAddr (8, 0) | read only | reset val: null
 reg [31:0] badvaddr;
 always @(posedge clk) begin
-    if(ex_valid && ex_mem) badvaddr <= ex_badvaddr;
+    if(exc_valid && exc_mem) badvaddr <= exc_badvaddr;
 end
 
 // *Count (9, 0) | read/write | reset val: null
@@ -76,7 +76,7 @@ always @(posedge clk) begin
     if(status_wen) Status_IM <= wdata[`Status_IM];
     // * EXL
     if(!resetn)         Status_EXL <= 1'b0;
-    else if(ex_valid)   Status_EXL <= !ex_eret;
+    else if(exc_valid)  Status_EXL <= !exc_eret;
     else if(status_wen) Status_EXL <= wdata[`Status_EXL];
     // *IE
     if(!resetn)         Status_IE <= 1'b0;
@@ -95,7 +95,7 @@ wire [5:0] hardware_int = ext_int | {timer_int, 5'b0};
 always @(posedge clk) begin
     // *BD
     if(!resetn)                         Cause_BD <= 1'b0;
-    else if(ex_valid && !Status_EXL)    Cause_BD <= ex_bd;
+    else if(exc_valid && !Status_EXL)   Cause_BD <= exc_bd;
     // *TI
     if(!resetn) Cause_TI <= 1'b0;
     else        Cause_TI <= timer_int;
@@ -105,15 +105,15 @@ always @(posedge clk) begin
     if(!resetn)         ip_software <= 2'b0;
     else if(cause_wen)  ip_software <= wdata[`Cause_IP_SOFTWARE];
     // *ExcCode
-    if(!resetn)         Cause_ExcCode <= 5'b0;
-    else if(ex_valid)   Cause_ExcCode <= ex_excode;
+    if(!resetn)                         Cause_ExcCode <= 5'b0;
+    else if(exc_valid && !Status_EXL)   Cause_ExcCode <= exc_excode;
 end
 
 // * EPC (14, 0) | read/write | reset val: null
 wire epc_wen = wen && addr == `CP0_EPC;
 always @(posedge clk) begin
     if(epc_wen)                         epc <= wdata;
-    else if(ex_valid && !Status_EXL)    epc <= ex_epc;  // *ex_epc: if Cause.BD is 1, ex_epc == pc-4
+    else if(exc_valid && !Status_EXL)   epc <= exc_epc;  // *exc_epc: if Cause.BD is 1, exc_epc == pc-4
 end
 // *                            存在未被屏蔽的中断                 没有例外在处理   中断使能开启
 assign ext_int_response = ({hardware_int, ip_software} & Status_IM) && !Status_EXL && Status_IE;

@@ -113,6 +113,7 @@ module mycpu_top(
     wire        mem_bd;
     wire        mem_regwen;
     wire [4 :0] mem_wreg;
+    wire        mem_data_en;
     wire [3 :0] mem_data_ren;
     wire [31:0] mem_rdata;
     wire [3 :0] mem_data_wen;
@@ -134,6 +135,7 @@ module mycpu_top(
     wire        wb_load;
     wire        wb_loadX;
     wire [3 :0] wb_lsV;
+    wire [1 :0] wb_data_addr;
     wire        wb_al;
     wire        wb_regwen;
     wire [4 :0] wb_wreg;
@@ -147,7 +149,7 @@ module mycpu_top(
     wire [31:0] cp0_epc;
     wire id_recode;
 
-    wire    load_stall;
+    wire    cu_stall;
 
     wire    if_id_stall;
     wire    id_ex_stall;
@@ -173,6 +175,7 @@ module mycpu_top(
         .ex_rt      (ex_rt),
 
         .exc_oc     (mem_exc_oc),
+        .eret       (id_eret),
 
         .id_branch  (id_branch),
         .id_rs_ren  (id_rs_ren),
@@ -186,7 +189,7 @@ module mycpu_top(
         .ex_wreg    (ex_wreg),
 
         .id_recode  (id_recode),
-        .load_stall (load_stall),
+        .stall      (cu_stall),
 
         .if_id_stall    (if_id_stall),
         .id_ex_stall    (id_ex_stall),
@@ -230,17 +233,20 @@ module mycpu_top(
         .BranchTake     (id_branch && id_jump),
         .exc_oc         (mem_exc_oc),
 
-        .eret           (mem_eret), // * eret
+        .eret           (id_eret),  // * eret
         .epc            (cp0_epc),  // * epc from cp0
         .npc            (npc)
     );
 
-    assign inst_sram_addr = !load_stall ? npc : npc-32'd4;
+    assign inst_sram_addr = !cu_stall ? npc : npc-32'd4;
 
     assign if_inst_ADDRESS_ERROR = inst_sram_addr[1:0] != 2'b00;
     // wire [`EXBITS] if_ex = {if_inst_ADDRESS_ERROR, `NUM_EX_1'b0};
 
-    wire [31:0] id_pc_tmp, id_inst_tmp;
+    reg exc_oc_invalid; // * 异常发生后紧接着取出的指令不是正确指令
+    always @(posedge clk) exc_oc_invalid <= !resetn ? 1'b0 : mem_exc_oc;
+
+    // //wire [31:0] id_pc_tmp, id_inst_tmp;
     //// wire [`EXBITS] id_ex_tmp;
     wire id_bd_tmp;
 
@@ -260,9 +266,6 @@ module mycpu_top(
         .id_addr_error  (id_addr_error),
         .id_pc          (id_pc)
 
-        // .id_bd  (id_bd),
-        // .id_ex  (id_ex),
-        // .id_pc  (id_pc)
         // //.id_inst(id_inst)
     );
 
@@ -276,7 +279,7 @@ module mycpu_top(
     
     // assign id_inst = inst_sram_rdata;
     // *id recode
-    assign id_inst  = !id_recode ? inst_sram_rdata  : ex_inst;
+    assign id_inst  = exc_oc_invalid ? 32'b0 : !id_recode ? inst_sram_rdata : ex_inst;
     // assign id_pc    = !id_recode ? id_pc_tmp        : ex_pc;
     // assign id_bd    = !id_recode ? id_bd_tmp        : ex_bd;
 
@@ -458,7 +461,7 @@ module mycpu_top(
     );
 
     // * write HI LO
-    wire [31:0] hiwdata =   ex_func == `MTHI ? inAlu1 : // *GPR[rs] -> HI
+    wire [31:0] hiwdata =   ex_hilowen == 2'b10 ? inAlu1 : // *GPR[rs] -> HI
                             ex_mult ?
                                 {32{!ex_mdsign} } & mul_res[63:32] |
                                 {32{ex_mdsign}  } & mul_signed_res[63:32] :
@@ -466,7 +469,7 @@ module mycpu_top(
                                 {32{!ex_mdsign} } & div_res[63:32] |
                                 {32{ex_mdsign}  } & div_signed_res[63:32] :
                             32'b0;
-    wire [31:0] lowdata =   ex_func == `MTLO ? inAlu1 : // *GPR[rs] -> LO
+    wire [31:0] lowdata =   ex_hilowen == 2'b01 ? inAlu1 : // *GPR[rs] -> LO
                             ex_mult ?
                                 {32{!ex_mdsign} } & mul_res[31:0] |
                                 {32{ex_mdsign}  } & mul_signed_res[31:0] :
@@ -482,6 +485,7 @@ module mycpu_top(
         .hiwdata(hiwdata),
         .lowdata(lowdata),
         .ren    (ex_hiloren),
+        .exc_oc (mem_exc_oc),
         .rdata  (ex_hilordata)
     );
 
@@ -532,9 +536,9 @@ module mycpu_top(
         .mem_lsV        (mem_lsV),
         .mem_bd         (mem_bd),
         .mem_al         (mem_al),
-        .mem_data_en    (data_sram_en),     // * data_sram_en
+        .mem_data_en    (mem_data_en),     // * data_sram_en
         .mem_data_ren   (mem_data_ren),
-        .mem_data_wen   (data_sram_wen),    // * data_sram_wen
+        .mem_data_wen   (mem_data_wen),    // * data_sram_wen
         .mem_wdata      (mem_wdata),        // * mem_wdata: store命令写入数据, mtc0命令的写入数据
         .mem_regwen     (mem_regwen),
         .mem_wreg       (mem_wreg),
@@ -550,9 +554,11 @@ module mycpu_top(
     // *MEM
     // wire [4:0] mem_rs = `GET_Rs(mem_inst);
     wire [4:0] mem_rt = `GET_Rt(mem_inst);
+    assign data_sram_en = mem_data_en && !mem_data_ADDRESS_ERROR;
     assign data_sram_addr = mem_res & 32'h1fff_ffff;
  
-    assign mem_data_ADDRESS_ERROR = data_sram_en && (mem_load && (mem_data_ren == 4'b0011 && data_sram_addr[0] || mem_data_ren == 4'b1111 && data_sram_addr[1:0] != 2'b00)
+    assign data_sram_wen = mem_data_wen << data_sram_addr[1:0];
+    assign mem_data_ADDRESS_ERROR = mem_data_en && (mem_load && (mem_data_ren == 4'b0011 && data_sram_addr[0] || mem_data_ren == 4'b1111 && data_sram_addr[1:0] != 2'b00)
                                     || !mem_load && (mem_data_wen == 4'b0011 && data_sram_addr[0] || mem_data_wen == 4'b1111 && data_sram_addr[1:0] != 2'b00));
                                 // !data_sram_en ? 1'b0 :  // 不访存
                                 // mem_load ? (            // load指令
@@ -565,7 +571,7 @@ module mycpu_top(
                                 // (mem_data_wen == 4'b1111) ? data_sram_addr[1:0] != 2'b00 : 1'b0;
 
     wire [`EXBITS] MEM_ex = mem_ex | {5'b0, mem_data_ADDRESS_ERROR};
-    wire [4:0] ex_excode =  ext_int ? `EXC_INT :
+    wire [4:0] exc_excode = ext_int ? `EXC_INT :
                             MEM_ex[5] ? `EXC_AdEL : // *取指地址错
                             MEM_ex[4] ? `EXC_RI :   // *RI
                             MEM_ex[3] ? `EXC_Ov :   // *Overflow
@@ -576,18 +582,18 @@ module mycpu_top(
                             : 5'b0;
 
     wire ext_int_response;
-    wire [31:0] ex_epc = mem_bd ? mem_pc-32'd4 : mem_pc;
-    wire [31:0] cp0_status, cp0_cause;
-    wire ex_valid = cp0_cause[`Status_EXL] ? !wb_eret : // * valid 1 : 表示有例外在处理, 刚传到mem段的例外也算属于在处理
+    wire [31:0] exc_epc = mem_bd ? mem_pc-32'd4 : mem_pc;
+    wire [31:0] cp0_status, cp0_cause;  // * cp0cause not use for now
+    wire exc_valid = cp0_status[`Status_EXL] ? !wb_eret : // * valid 1 : 表示有例外在处理, 刚传到mem段的例外也算属于在处理
                     ext_int_response ? 1'b1 : |MEM_ex;
     wire [31:0] cp0_wdata = wb_regwen && mem_rt == wb_wreg ? wb_reorder_data : mem_wdata;
     // * 重定向一致 cp0_wdata, data_sram_wdata
     assign data_sram_wdata = {  {8{mem_lsV[3]}} & cp0_wdata[31:24],
                                 {8{mem_lsV[2]}} & cp0_wdata[23:16],
                                 {8{mem_lsV[1]}} & cp0_wdata[15: 8],
-                                {8{mem_lsV[0]}} & cp0_wdata[7 : 0]};
+                                {8{mem_lsV[0]}} & cp0_wdata[7 : 0]} << {data_sram_addr[1:0], 3'b000};
 
-    assign mem_exc_oc = !cp0_cause[`Status_EXL] && ex_valid;
+    assign mem_exc_oc = !cp0_status[`Status_EXL] && exc_valid;
     // * CP0 regs
     cp0 u_cp0(
         .clk    (clk),
@@ -601,12 +607,12 @@ module mycpu_top(
         .wdata  (cp0_wdata),
         .rdata  (mem_cp0rdata),
 
-        .ex_valid   (ex_valid),
-        .ex_excode  (ex_excode),
-        .ex_bd      (mem_bd),
-        .ex_epc     (ex_epc),   // * 中断的时候epc 也给mem段的pc
-        .ex_badvaddr(data_sram_addr),
-        .ex_eret    (mem_eret),
+        .exc_valid      (exc_valid),
+        .exc_excode     (exc_excode),
+        .exc_bd         (mem_bd),
+        .exc_epc        (exc_epc),   // * 中断的时候epc 也给mem段的pc
+        .exc_badvaddr   (mem_res),
+        .exc_eret       (mem_eret),
 
         .cause      (cp0_cause),
         .status     (cp0_status),
@@ -626,6 +632,7 @@ module mycpu_top(
         .mem_load       (mem_load),
         .mem_loadX      (mem_loadX),
         .mem_lsV        (mem_lsV),
+        .mem_data_addr  (data_sram_addr[1:0]),
         // .mem_rdata      (data_sram_rdata),
         .mem_al         (mem_al),
         .mem_regwen     (mem_regwen),
@@ -637,30 +644,33 @@ module mycpu_top(
         .mem_hilowen    (mem_hilowen),
         .mem_hilordata  (mem_hilordata),
 
-        .wb_pc      (wb_pc),
-        .wb_inst    (wb_inst),
-        .wb_res     (wb_res),
-        .wb_load    (wb_load),
-        .wb_loadX   (wb_loadX),
-        .wb_lsV     (wb_lsV),
+        .wb_pc          (wb_pc),
+        .wb_inst        (wb_inst),
+        .wb_res         (wb_res),
+        .wb_load        (wb_load),
+        .wb_loadX       (wb_loadX),
+        .wb_lsV         (wb_lsV),
+        .wb_data_addr   (wb_data_addr),
         // .wb_rdata   (wb_rdata),
-        .wb_al      (wb_al),
-        .wb_regwen  (wb_regwen),
-        .wb_wreg    (wb_wreg),
-        .wb_eret    (wb_eret),
-        .wb_cp0ren  (wb_cp0ren),
-        .wb_cp0rdata(wb_cp0rdata),
+        .wb_al          (wb_al),
+        .wb_regwen      (wb_regwen),
+        .wb_wreg        (wb_wreg),
+        .wb_eret        (wb_eret),
+        .wb_cp0ren      (wb_cp0ren),
+        .wb_cp0rdata    (wb_cp0rdata),
         .wb_hiloren     (wb_hiloren),
         .wb_hilowen     (wb_hilowen),
         .wb_hilordata   (wb_hilordata)
     );
 
-    assign wb_rdata[7 : 0] =    {8{wb_lsV[0]}} & data_sram_rdata[7:0];
-    assign wb_rdata[15: 8] =    {8{wb_lsV[1]}} & data_sram_rdata[15:8] |
-                                {8{!wb_lsV[1] && wb_loadX && data_sram_rdata[7]}};
-    assign wb_rdata[31:16] =    {16{wb_lsV[2] && wb_lsV[3]}} & data_sram_rdata[31:16]   |
-                                {16{!wb_lsV[2] && !wb_lsV[3] && wb_lsV[1] && wb_loadX && data_sram_rdata[15]}} |
-                                {16{!wb_lsV[2] && !wb_lsV[3] && wb_lsV[0] && wb_loadX && data_sram_rdata[7]}};
+    wire [31:0] data_rdata = data_sram_rdata >> {wb_data_addr, 3'b0};
+
+    assign wb_rdata[7 : 0] =    {8{wb_lsV[0]}} & data_rdata[7:0];
+    assign wb_rdata[15: 8] =    {8{wb_lsV[1]}} & data_rdata[15:8] |
+                                {8{!wb_lsV[1] && wb_lsV[0] && wb_loadX && data_rdata[7]}};
+    assign wb_rdata[31:16] =    {16{wb_lsV[2] && wb_lsV[3]}} & data_rdata[31:16]   |
+                                {16{!wb_lsV[2] && !wb_lsV[3] && wb_lsV[1] && wb_loadX && data_rdata[15]}} |
+                                {16{!wb_lsV[2] && !wb_lsV[3] && !wb_lsV[1] && wb_lsV[0] && wb_loadX && data_rdata[7]}};
 
     // *WB
     assign inRegData =  {32{wb_al}      } & (wb_pc + 32'd8) |   // *al: pc+8 -> GPR[31]

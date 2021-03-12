@@ -17,6 +17,7 @@ module cu(
     input [4:0] ex_rt,
 
     input exc_oc,
+    input eret,
 
     input id_branch,
     input id_rs_ren,
@@ -30,7 +31,7 @@ module cu(
     input [4:0] ex_wreg,
 
     output  id_recode,
-    output  load_stall,
+    output  stall,
 
     output  if_id_stall,
     output  id_ex_stall,
@@ -49,12 +50,13 @@ wire ex_stall   = (ex_rel_rs || ex_rel_rt) && (ex_load || ex_cp0ren);
 
 wire mem_rel_rs = id_branch && id_rs_ren && mem_regwen && mem_wreg == id_rs;
 wire mem_rel_rt = id_branch && id_rt_ren && mem_regwen && mem_wreg == id_rt;
-wire mem_stall  = !ex_rel_rs && !ex_rel_rt && (mem_rel_rs || mem_rel_rt) && mem_load;
+wire mem_stall  = !ex_stall && (mem_rel_rs && !ex_rel_rs || mem_rel_rt && !ex_rel_rt) && mem_load;
 
-assign load_stall = mem_load && (ex_rs_ren && mem_wreg == ex_rs || ex_rt_ren && mem_wreg == ex_rt);
+wire load_stall = mem_load && (ex_rs_ren && mem_wreg == ex_rs || ex_rt_ren && mem_wreg == ex_rt);
 
 // *id recode load load 时重新译码
 assign id_recode = load_stall; // * remove mem_stall
+assign stall = load_stall || ex_stall || mem_stall;
 // always @(posedge clk) begin
 //     if(!resetn) id_recode <= 1'b0;
 //     else id_recode <= load_stall || mem_stall;
@@ -66,10 +68,10 @@ assign ex_mem_stall = 1'b0;
 assign id_ex_stall = mem_stall;  // *id recode
 assign if_id_stall = load_stall || ex_stall || mem_stall;   // ! 时序出错(应该是这里)
 
-assign if_id_refresh = exc_oc;
+assign if_id_refresh = exc_oc || eret;
 assign id_ex_refresh = exc_oc || ex_stall || !id_pc;
 assign ex_mem_refresh = exc_oc || load_stall || mem_stall;
-assign mem_wb_refresh = 1'b0;
+assign mem_wb_refresh = exc_oc;
 
 endmodule
 

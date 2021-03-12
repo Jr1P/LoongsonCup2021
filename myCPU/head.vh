@@ -118,10 +118,10 @@
 `define GET_Rs(x)   x[25:21]
 `define GET_Rt(x)   x[20:16]
 `define GET_Rd(x)   x[15:11]
-`define GET_Imm(x)  x[15:0]
-`define GET_SA(x)   x[10:6]
-`define GET_FUNC(x) x[5 :0]
-`define GET_SEL(x)  x[2 :0]
+`define GET_Imm(x)  x[15: 0]
+`define GET_SA(x)   x[10: 6]
+`define GET_FUNC(x) x[5 : 0]
+`define GET_SEL(x)  x[2 : 0]
 
 `define LDEC    57
 `define DECBITS `LDEC-1:0
