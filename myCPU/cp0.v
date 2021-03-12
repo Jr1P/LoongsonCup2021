@@ -89,7 +89,7 @@ reg [5:0] ip_hardware;  // *read only   | reset val: 0
 reg [1:0] ip_software;  // *read/write  | reset val: 0
 reg [4:0] Cause_ExcCode;
 // *                31       30                15:10        9:8                 6:2
-assign cause = {Cause_BD, Cause_TI, 15'b0, ip_hardware, ip_software, 1'b0, Cause_ExcCode, 2'b0};
+assign cause = {Cause_BD, Cause_TI, 14'b0, ip_hardware, ip_software, 1'b0, Cause_ExcCode, 2'b0};
 wire cause_wen = wen && addr == `CP0_Cause;
 wire [5:0] hardware_int = ext_int | {timer_int, 5'b0};
 always @(posedge clk) begin

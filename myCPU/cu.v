@@ -57,10 +57,6 @@ wire load_stall = mem_load && (ex_rs_ren && mem_wreg == ex_rs || ex_rt_ren && me
 // *id recode load load 时重新译码
 assign id_recode = load_stall; // * remove mem_stall
 assign stall = load_stall || ex_stall || mem_stall;
-// always @(posedge clk) begin
-//     if(!resetn) id_recode <= 1'b0;
-//     else id_recode <= load_stall || mem_stall;
-// end
 
 assign mem_wb_stall = 1'b0;
 assign ex_mem_stall = 1'b0;

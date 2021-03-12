@@ -246,8 +246,6 @@ module mycpu_top(
     reg exc_oc_invalid; // * 异常发生后紧接着取出的指令不是正确指令
     always @(posedge clk) exc_oc_invalid <= !resetn ? 1'b0 : mem_exc_oc;
 
-    // //wire [31:0] id_pc_tmp, id_inst_tmp;
-    //// wire [`EXBITS] id_ex_tmp;
     wire id_bd_tmp;
 
     if_id_seg u_if_id_seg(
@@ -280,8 +278,6 @@ module mycpu_top(
     // assign id_inst = inst_sram_rdata;
     // *id recode
     assign id_inst  = exc_oc_invalid ? 32'b0 : !id_recode ? inst_sram_rdata : ex_inst;
-    // assign id_pc    = !id_recode ? id_pc_tmp        : ex_pc;
-    // assign id_bd    = !id_recode ? id_bd_tmp        : ex_bd;
 
     regfile u_regfile(
         .clk    (clk),
@@ -594,6 +590,7 @@ module mycpu_top(
                                 {8{mem_lsV[0]}} & cp0_wdata[7 : 0]} << {data_sram_addr[1:0], 3'b000};
 
     assign mem_exc_oc = !cp0_status[`Status_EXL] && exc_valid;
+    wire [31:0] exc_badvaddr = MEM_ex[5] ? mem_pc : mem_res;
     // * CP0 regs
     cp0 u_cp0(
         .clk    (clk),
@@ -611,7 +608,7 @@ module mycpu_top(
         .exc_excode     (exc_excode),
         .exc_bd         (mem_bd),
         .exc_epc        (exc_epc),   // * 中断的时候epc 也给mem段的pc
-        .exc_badvaddr   (mem_res),
+        .exc_badvaddr   (exc_badvaddr),
         .exc_eret       (mem_eret),
 
         .cause      (cp0_cause),
